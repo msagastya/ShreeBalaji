@@ -229,7 +229,11 @@ async function loadAllData(){
             // Calculate totals
             let taxable = 0;
             (d.items || []).forEach(it => {
-                taxable += parseFloat(String(it.amt || 0).replace(/,/g,'')) || 0;
+                let rowAmt = parseFloat(String(it.amt || 0).replace(/,/g,''));
+                if(!rowAmt && it.qty && it.rate) {
+                    rowAmt = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
+                }
+                taxable += rowAmt;
             });
             
             const item = {
