@@ -641,8 +641,8 @@ async function saveInvoice(){
   }
   setDbStatus('Saving...');
   const { error } = await db
-    .from('invoices')
-    .upsert({ invoice_no: data.invoice.no, data }, { onConflict: 'invoice_no' });
+    .from('data')
+    .upsert({ data_no: data.invoice.no, data }, { onConflict: 'data_no' });
   if(error){
     console.error(error);
     setDbStatus('Save failed');
@@ -660,9 +660,9 @@ async function loadInvoice(){
   }
   setDbStatus('Loading...');
   const { data, error } = await db
-    .from('invoices')
+    .from('data')
     .select('data')
-    .eq('invoice_no', invoiceNo)
+    .eq('data_no', invoiceNo)
     .maybeSingle();
   if(error){
     console.error(error);
