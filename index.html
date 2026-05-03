@@ -22,8 +22,13 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;backgroun
 .btn-clear:hover{background:#c62828;}
 .btn-reset{background:#FF9800;color:#fff;}
 .btn-reset:hover{background:#E65100;}
+.btn-save{background:#673AB7;color:#fff;}
+.btn-save:hover{background:#4527A0;}
+.btn-load{background:#009688;color:#fff;}
+.btn-load:hover{background:#00695C;}
 .toolbar .sep{width:1px;height:24px;background:#555;margin:0 4px;}
 .toolbar .tb-title{font-size:13px;font-weight:bold;color:#fff;margin-right:8px;}
+.db-status{font-size:11px;color:#ddd;min-width:120px;}
 
 /* ── INVOICE WRAPPER ── */
 .page-wrap{padding:20px;display:flex;justify-content:center;}
@@ -185,6 +190,9 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   <button class="btn-add" onclick="copyBillToShip()">Bill = Ship</button>
   <button class="btn-reset" onclick="resetForm()">↺ New Invoice</button>
   <button class="btn-clear" onclick="clearItems()">✕ Clear Items</button>
+  <button class="btn-save" onclick="saveInvoice()">Save</button>
+  <button class="btn-load" onclick="loadInvoice()">Load</button>
+  <span class="db-status" id="db-status"></span>
   <div class="sep"></div>
   <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
 </div>
@@ -399,9 +407,13 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
 </div><!-- end .inv -->
 </div><!-- end .page-wrap -->
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ─── CONFIG ───
 const DEFAULT_ROWS = 12;
+const SUPABASE_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co';
+const SUPABASE_KEY = 'sb_publishable__KVsnY9-ZDwaKHGZ51cAbA_sLpzxljX';
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 const PREFILLED = [
   {desc:'PAPER REEL', lr:'', bill:'3',  qty:'13016', unit:'KGS', rate:'0.18'},
   {desc:'PAPER REEL', lr:'', bill:'12', qty:'13040', unit:'KGS', rate:'0.18'},
@@ -448,19 +460,19 @@ function createRow(data={}){
 
   const qty  = data.qty||'';
   const rate = data.rate||'';
-  const amt  = (qty && rate) ? (parseFloat(qty)*parseFloat(rate)).toFixed(2) : '';
+  const amt  = data.amt || ((qty && rate) ? (parseFloat(qty)*parseFloat(rate)).toFixed(2) : '');
 
   tr.innerHTML = `
     <td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Delete row">✕</button></td>
     <td class="c" style="font-size:8px;color:#888;">${idx}</td>
-    <td class="c"><input class="it-input ctr" placeholder="Date" value="${data.date||''}"></td>
-    <td><input class="it-input" placeholder="Description…" value="${data.desc||''}"></td>
-    <td class="c"><input class="it-input ctr" placeholder="LR No." value="${data.lr||''}"></td>
-    <td class="c"><input class="it-input ctr" placeholder="Bill No." value="${data.bill||''}"></td>
+    <td class="c"><input class="it-input ctr" data-role="date" placeholder="Date" value="${data.date||''}"></td>
+    <td><input class="it-input" data-role="desc" placeholder="Description…" value="${data.desc||''}"></td>
+    <td class="c"><input class="it-input ctr" data-role="lr" placeholder="LR No." value="${data.lr||''}"></td>
+    <td class="c"><input class="it-input ctr" data-role="bill" placeholder="Bill No." value="${data.bill||''}"></td>
     <td class="c">
       <div class="rate-wrap">
         <input class="it-input num" data-role="qty" placeholder="0" value="${qty}" style="width:55px;" oninput="calcRow(this)">
-        <input class="it-input ctr" placeholder="Unit" value="${data.unit||''}" style="width:32px;font-size:7.5px;color:#666;">
+        <input class="it-input ctr" data-role="unit" placeholder="Unit" value="${data.unit||''}" style="width:32px;font-size:7.5px;color:#666;">
       </div>
     </td>
     <td class="c"><input class="it-input num" data-role="rate" placeholder="0.00" value="${rate}" style="width:100%;" oninput="calcRow(this)"></td>
@@ -544,6 +556,127 @@ function addRow(data={}){
 function copyBillToShip(){
   document.getElementById('ship-name').textContent = document.getElementById('bill-name').textContent.trim();
   document.getElementById('ship-address').textContent = document.getElementById('bill-address').textContent.trim();
+}
+
+// ─── DATABASE HELPERS ───
+function setDbStatus(text){
+  document.getElementById('db-status').textContent = text;
+}
+
+function field(id){
+  return document.getElementById(id).value.trim();
+}
+
+function editableText(id){
+  return document.getElementById(id).textContent.trim();
+}
+
+function rowValue(tr, role){
+  const input = tr.querySelector(`[data-role="${role}"]`);
+  return input ? input.value.trim() : '';
+}
+
+function collectInvoice(){
+  return {
+    invoice: {
+      no: field('inv-no'),
+      date: field('inv-date'),
+      placeOfSupply: field('inv-pos'),
+      reverseCharge: field('inv-rc'),
+      gstRate: field('gst-rate'),
+      receivedAmount: field('rcvd-amt')
+    },
+    billTo: {
+      name: editableText('bill-name'),
+      address: editableText('bill-address')
+    },
+    shipTo: {
+      name: editableText('ship-name'),
+      address: editableText('ship-address')
+    },
+    hsn: {
+      code: field('hsn-code')
+    },
+    items: Array.from(document.querySelectorAll('#items-body tr')).map(tr => ({
+      date: rowValue(tr, 'date'),
+      desc: rowValue(tr, 'desc'),
+      lr: rowValue(tr, 'lr'),
+      bill: rowValue(tr, 'bill'),
+      qty: rowValue(tr, 'qty').replace(/,/g, ''),
+      unit: rowValue(tr, 'unit'),
+      rate: rowValue(tr, 'rate').replace(/,/g, ''),
+      amt: rowValue(tr, 'amt').replace(/,/g, '')
+    }))
+  };
+}
+
+function applyInvoice(data){
+  if(!data) return;
+  document.getElementById('inv-no').value = data.invoice?.no || '';
+  document.getElementById('inv-date').value = data.invoice?.date || '';
+  document.getElementById('inv-pos').value = data.invoice?.placeOfSupply || '';
+  document.getElementById('inv-rc').value = data.invoice?.reverseCharge || 'No';
+  document.getElementById('gst-rate').value = data.invoice?.gstRate || '18';
+  document.getElementById('rcvd-amt').value = data.invoice?.receivedAmount || '0';
+  document.getElementById('bill-name').textContent = data.billTo?.name || '';
+  document.getElementById('bill-address').textContent = data.billTo?.address || '';
+  document.getElementById('ship-name').textContent = data.shipTo?.name || '';
+  document.getElementById('ship-address').textContent = data.shipTo?.address || '';
+  document.getElementById('hsn-code').value = data.hsn?.code || '9965';
+
+  const body = document.getElementById('items-body');
+  body.innerHTML = '';
+  rowCount = 0;
+  const rows = Array.isArray(data.items) && data.items.length ? data.items : [];
+  rows.forEach(item => body.appendChild(createRow(item)));
+  for(let i=rows.length;i<DEFAULT_ROWS;i++) body.appendChild(createRow());
+  updateTotals();
+}
+
+async function saveInvoice(){
+  const data = collectInvoice();
+  if(!data.invoice.no){
+    alert('Please enter an invoice number before saving.');
+    return;
+  }
+  setDbStatus('Saving...');
+  const { error } = await db
+    .from('invoices')
+    .upsert({ invoice_no: data.invoice.no, data }, { onConflict: 'invoice_no' });
+  if(error){
+    console.error(error);
+    setDbStatus('Save failed');
+    alert('Could not save invoice: '+error.message);
+    return;
+  }
+  setDbStatus('Saved');
+}
+
+async function loadInvoice(){
+  const invoiceNo = field('inv-no');
+  if(!invoiceNo){
+    alert('Enter invoice number to load.');
+    return;
+  }
+  setDbStatus('Loading...');
+  const { data, error } = await db
+    .from('invoices')
+    .select('data')
+    .eq('invoice_no', invoiceNo)
+    .maybeSingle();
+  if(error){
+    console.error(error);
+    setDbStatus('Load failed');
+    alert('Could not load invoice: '+error.message);
+    return;
+  }
+  if(!data){
+    setDbStatus('Not found');
+    alert('No saved invoice found for '+invoiceNo);
+    return;
+  }
+  applyInvoice(data.data);
+  setDbStatus('Loaded');
 }
 
 // ─── UPDATE ALL TOTALS ───
