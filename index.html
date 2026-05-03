@@ -8,6 +8,15 @@
 /* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;background:#e8e8e8;}
+.logged-out .toolbar,.logged-out .page-wrap{display:none;}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#e8e8e8;padding:20px;}
+.login-box{width:320px;background:#fff;border:1px solid #bbb;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,0.12);}
+.login-box h1{font-size:18px;letter-spacing:1px;margin-bottom:12px;color:#222;}
+.login-box label{display:block;font-size:11px;font-weight:bold;margin:10px 0 4px;color:#333;}
+.login-box input{width:100%;border:1px solid #aaa;padding:8px;font-size:13px;}
+.login-box button{width:100%;margin-top:14px;padding:9px;border:none;background:#333;color:#fff;font-weight:bold;cursor:pointer;}
+.login-error{font-size:11px;color:#c62828;min-height:14px;margin-top:8px;}
+.logged-in .login-screen{display:none;}
 
 /* ── TOOLBAR (hidden on print) ── */
 .toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
@@ -162,6 +171,7 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
   body{background:#fff;}
   .toolbar{display:none!important;}
+  .login-screen{display:none!important;}
   .page-wrap{padding:0;}
   .inv{border:none;width:100%;}
   .del-cell{display:none!important;}
@@ -176,7 +186,19 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
 }
 </style>
 </head>
-<body>
+<body class="logged-out">
+
+<div class="login-screen no-print">
+  <form class="login-box" onsubmit="login(event)">
+    <h1>SHREE BALAJI LOGIN</h1>
+    <label>Username</label>
+    <input id="login-user" type="text" autocomplete="username" value="ShreeBalaji">
+    <label>Password</label>
+    <input id="login-pass" type="password" autocomplete="current-password" value="ShreeBalaji">
+    <button type="submit">Login</button>
+    <div class="login-error" id="login-error"></div>
+  </form>
+</div>
 
 <!-- ══════════════ TOOLBAR ══════════════ -->
 <div class="toolbar no-print">
@@ -188,10 +210,14 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   <div class="sep"></div>
   <button class="btn-add" onclick="addRow()">+ Add Row</button>
   <button class="btn-add" onclick="copyBillToShip()">Bill = Ship</button>
+  <button class="btn-load" onclick="savePartyMaster()">Save Party</button>
+  <button class="btn-load" onclick="loadPartyMaster()">Load Party</button>
   <button class="btn-reset" onclick="resetForm()">↺ New Invoice</button>
   <button class="btn-clear" onclick="clearItems()">✕ Clear Items</button>
   <button class="btn-save" onclick="saveInvoice()">Save</button>
   <button class="btn-load" onclick="loadInvoice()">Load</button>
+  <button class="btn-load" onclick="listInvoices()">Recent</button>
+  <button class="btn-clear" onclick="logout()">Logout</button>
   <span class="db-status" id="db-status"></span>
   <div class="sep"></div>
   <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
@@ -245,11 +271,11 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
           <div class="adr-co editable" id="bill-name" contenteditable="true" data-placeholder="Party Name">SHIVAM PACKAGING</div>
           <div class="adr-ln editable" id="bill-address" contenteditable="true" data-placeholder="Address Line 1" style="margin-top:2px;">PLOT NO-SPL-123,129/18,19, FIRST FLOOR, I ZONE GIDC, SACHIN, Surat, Gujarat – 394230</div>
           <div class="adr-ln" style="margin-top:2px;">
-            <b>Mobile:</b> <span class="editable" contenteditable="true" data-placeholder="Mobile">9429892099</span>
-            &nbsp;|&nbsp; <b>GSTIN:</b> <span class="editable" contenteditable="true" data-placeholder="GSTIN">24ADKFS6457N1ZC</span>
-            &nbsp;|&nbsp; <b>PAN:</b> <span class="editable" contenteditable="true" data-placeholder="PAN">ADKFS6457N</span>
+            <b>Mobile:</b> <span class="editable" id="bill-mobile" contenteditable="true" data-placeholder="Mobile">9429892099</span>
+            &nbsp;|&nbsp; <b>GSTIN:</b> <span class="editable" id="bill-gstin" contenteditable="true" data-placeholder="GSTIN">24ADKFS6457N1ZC</span>
+            &nbsp;|&nbsp; <b>PAN:</b> <span class="editable" id="bill-pan" contenteditable="true" data-placeholder="PAN">ADKFS6457N</span>
           </div>
-          <div class="adr-ln"><b>Place of Supply:</b> <span class="editable" contenteditable="true" data-placeholder="State">Gujarat (24)</span></div>
+          <div class="adr-ln"><b>Place of Supply:</b> <span class="editable" id="bill-state" contenteditable="true" data-placeholder="State">Gujarat (24)</span></div>
         </div>
       </div>
     </td>
@@ -407,13 +433,13 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
 </div><!-- end .inv -->
 </div><!-- end .page-wrap -->
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 // ─── CONFIG ───
 const DEFAULT_ROWS = 12;
 const SUPABASE_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co';
-const SUPABASE_KEY = 'sb_publishable__KVsnY9-ZDwaKHGZ51cAbA_sLpzxljX';
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const API_URL = SUPABASE_URL + '/functions/v1/shreebalaji-api';
+const LOGIN_USER = 'ShreeBalaji';
+const LOGIN_PASS = 'ShreeBalaji';
 const PREFILLED = [
   {desc:'PAPER REEL', lr:'', bill:'3',  qty:'13016', unit:'KGS', rate:'0.18'},
   {desc:'PAPER REEL', lr:'', bill:'12', qty:'13040', unit:'KGS', rate:'0.18'},
@@ -424,6 +450,51 @@ const PREFILLED = [
 ];
 
 let rowCount = 0;
+
+function getAuth(){
+  return {
+    username: sessionStorage.getItem('sb_user') || '',
+    password: sessionStorage.getItem('sb_pass') || ''
+  };
+}
+
+function applyLoginState(){
+  const auth = getAuth();
+  const ok = auth.username === LOGIN_USER && auth.password === LOGIN_PASS;
+  document.body.className = ok ? 'logged-in' : 'logged-out';
+}
+
+function login(event){
+  event.preventDefault();
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if(username !== LOGIN_USER || password !== LOGIN_PASS){
+    document.getElementById('login-error').textContent = 'Invalid username or password';
+    return;
+  }
+  sessionStorage.setItem('sb_user', username);
+  sessionStorage.setItem('sb_pass', password);
+  document.getElementById('login-error').textContent = '';
+  applyLoginState();
+}
+
+function logout(){
+  sessionStorage.removeItem('sb_user');
+  sessionStorage.removeItem('sb_pass');
+  applyLoginState();
+}
+
+async function api(action, payload={}){
+  const auth = getAuth();
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ action, ...auth, ...payload })
+  });
+  const result = await response.json().catch(() => ({}));
+  if(!response.ok) throw new Error(result.error || 'Request failed');
+  return result;
+}
 
 // ─── FORMAT NUMBER ───
 function fmt(n){
@@ -588,7 +659,11 @@ function collectInvoice(){
     },
     billTo: {
       name: editableText('bill-name'),
-      address: editableText('bill-address')
+      address: editableText('bill-address'),
+      mobile: editableText('bill-mobile'),
+      gstin: editableText('bill-gstin'),
+      pan: editableText('bill-pan'),
+      state: editableText('bill-state')
     },
     shipTo: {
       name: editableText('ship-name'),
@@ -620,6 +695,10 @@ function applyInvoice(data){
   document.getElementById('rcvd-amt').value = data.invoice?.receivedAmount || '0';
   document.getElementById('bill-name').textContent = data.billTo?.name || '';
   document.getElementById('bill-address').textContent = data.billTo?.address || '';
+  document.getElementById('bill-mobile').textContent = data.billTo?.mobile || '';
+  document.getElementById('bill-gstin').textContent = data.billTo?.gstin || '';
+  document.getElementById('bill-pan').textContent = data.billTo?.pan || '';
+  document.getElementById('bill-state').textContent = data.billTo?.state || '';
   document.getElementById('ship-name').textContent = data.shipTo?.name || '';
   document.getElementById('ship-address').textContent = data.shipTo?.address || '';
   document.getElementById('hsn-code').value = data.hsn?.code || '9965';
@@ -640,10 +719,9 @@ async function saveInvoice(){
     return;
   }
   setDbStatus('Saving...');
-  const { error } = await db
-    .from('data')
-    .upsert({ data_no: data.invoice.no, data }, { onConflict: 'data_no' });
-  if(error){
+  try{
+    await api('saveInvoice', { data });
+  } catch(error){
     console.error(error);
     setDbStatus('Save failed');
     alert('Could not save invoice: '+error.message);
@@ -659,24 +737,104 @@ async function loadInvoice(){
     return;
   }
   setDbStatus('Loading...');
-  const { data, error } = await db
-    .from('data')
-    .select('data')
-    .eq('data_no', invoiceNo)
-    .maybeSingle();
-  if(error){
+  let result;
+  try{
+    result = await api('loadInvoice', { invoiceNo });
+  } catch(error){
     console.error(error);
     setDbStatus('Load failed');
     alert('Could not load invoice: '+error.message);
     return;
   }
-  if(!data){
+  if(!result.data){
     setDbStatus('Not found');
     alert('No saved invoice found for '+invoiceNo);
     return;
   }
-  applyInvoice(data.data);
+  applyInvoice(result.data);
   setDbStatus('Loaded');
+}
+
+async function savePartyMaster(){
+  const name = editableText('bill-name');
+  if(!name){
+    alert('Enter Bill To party name first.');
+    return;
+  }
+  const details = {
+    address: editableText('bill-address'),
+    mobile: editableText('bill-mobile'),
+    gstin: editableText('bill-gstin'),
+    pan: editableText('bill-pan'),
+    state: editableText('bill-state')
+  };
+  setDbStatus('Saving party...');
+  try{
+    await api('saveParty', { name, details });
+  } catch(error){
+    console.error(error);
+    setDbStatus('Party save failed');
+    alert('Could not save party: '+error.message);
+    return;
+  }
+  setDbStatus('Party saved');
+}
+
+async function loadPartyMaster(){
+  const name = editableText('bill-name');
+  if(!name){
+    alert('Enter Bill To party name to load.');
+    return;
+  }
+  setDbStatus('Loading party...');
+  let result;
+  try{
+    result = await api('loadParty', { name });
+  } catch(error){
+    console.error(error);
+    setDbStatus('Party load failed');
+    alert('Could not load party: '+error.message);
+    return;
+  }
+  if(!result.details){
+    setDbStatus('Party not found');
+    alert('No saved party found for '+name);
+    return;
+  }
+  document.getElementById('bill-address').textContent = result.details?.address || '';
+  document.getElementById('bill-mobile').textContent = result.details?.mobile || '';
+  document.getElementById('bill-gstin').textContent = result.details?.gstin || '';
+  document.getElementById('bill-pan').textContent = result.details?.pan || '';
+  document.getElementById('bill-state').textContent = result.details?.state || '';
+  document.getElementById('inv-pos').value = result.details?.state || document.getElementById('inv-pos').value;
+  setDbStatus('Party loaded');
+}
+
+async function listInvoices(){
+  setDbStatus('Loading recent...');
+  let result;
+  try{
+    result = await api('listInvoices');
+  } catch(error){
+    console.error(error);
+    setDbStatus('Recent failed');
+    alert('Could not load recent invoices: '+error.message);
+    return;
+  }
+  const rows = result.rows || [];
+  if(!rows.length){
+    setDbStatus('No recent invoices');
+    alert('No saved invoices yet.');
+    return;
+  }
+  const list = rows.map((row, i) => `${i+1}. ${row.invoice_no} - ${row.party_name || ''} ${row.invoice_date || ''}`).join('\n');
+  const choice = prompt('Type invoice number to load:\n\n'+list, rows[0].invoice_no);
+  if(choice){
+    document.getElementById('inv-no').value = choice.trim();
+    loadInvoice();
+  } else {
+    setDbStatus('');
+  }
 }
 
 // ─── UPDATE ALL TOTALS ───
@@ -759,6 +917,7 @@ function resetForm(){
 
 // ─── INIT ───
 (function init(){
+  applyLoginState();
   const body=document.getElementById('items-body');
   // Add prefilled rows
   PREFILLED.forEach(d=>body.appendChild(createRow(d)));
