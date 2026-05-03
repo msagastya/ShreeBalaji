@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Report — Shree Balaji Tempo Services</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;font-size:11px;color:#222;background:#f0f0f0;padding:20px;}
+.logged-out .toolbar, .logged-out .container{display:none;}
+.login-screen{width:100vw;min-height:100vh;display:flex;align-items:center;justify-content:center;}
+.login-box{background:#fff;border:1px solid #bbb;padding:20px;width:300px;box-shadow:0 4px 12px rgba(0,0,0,0.1);}
+.login-box h1{font-size:16px;margin-bottom:15px;}
+.login-box input{width:100%;padding:8px;margin-bottom:10px;border:1px solid #ccc;}
+.login-box button{width:100%;padding:10px;background:#333;color:#fff;border:none;cursor:pointer;}
+.logged-in .login-screen{display:none;}
+
+.toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:15px;margin-bottom:20px;border-radius:4px;}
+.toolbar a{color:#fff;text-decoration:none;font-weight:bold;font-size:11px;}
+.db-status{margin-left:auto;font-size:10px;color:#ccc;}
+
+.container{max-width:210mm;margin:0 auto;background:#fff;padding:15mm;box-shadow:0 0 10px rgba(0,0,0,0.1);min-height:297mm;}
+h1{text-align:center;font-size:22px;margin-bottom:5px;text-transform:uppercase;letter-spacing:2px;}
+.rpt-info{text-align:center;font-size:12px;color:#666;margin-bottom:30px;border-bottom:2px solid #333;padding-bottom:10px;}
+
+h2{font-size:16px;margin:30px 0 15px;background:#f2f2f2;padding:8px;border-left:5px solid #333;}
+table{width:100%;border-collapse:collapse;margin-bottom:20px;}
+th{background:#444;color:#fff;padding:8px;text-align:left;font-size:10px;border:1px solid #333;}
+td{padding:8px;border:1px solid #ddd;font-size:10px;vertical-align:top;}
+tr:nth-child(even){background:#fafafa;}
+
+.amt{text-align:right;font-weight:bold;}
+.footer{margin-top:50px;text-align:right;font-size:10px;color:#888;}
+
+@media print {
+    body{background:#fff;padding:0;}
+    .toolbar, .no-print{display:none;}
+    .container{box-shadow:none;margin:0;width:100%;max-width:none;padding:10mm;}
+    .page-break{page-break-before:always;}
+}
+</style>
+</head>
+<body class="logged-out">
+
+<div class="login-screen">
+  <div class="login-box">
+    <h1>SHREE BALAJI REPORT</h1>
+    <form onsubmit="login(event)">
+      <input type="text" id="login-user" placeholder="Username" required>
+      <input type="password" id="login-pass" placeholder="Password" required>
+      <button type="submit">LOGIN</button>
+    </form>
+  </div>
+</div>
+
+<div class="toolbar no-print">
+    <a href="index.html">← INVOICE ENTRY</a>
+    <a href="master.html">PARTY MASTER</a>
+    <button onclick="window.print()" style="padding:5px 15px; background:#4CAF50; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">PRINT TO PDF</button>
+    <div class="db-status" id="db-status">Loading data...</div>
+</div>
+
+<div class="container">
+    <h1>Shree Balaji Tempo Services</h1>
+    <div class="rpt-info">Business Data Summary Report — As of 30/04/2026</div>
+
+    <!-- PART 1: PARTY DIRECTORY -->
+    <h2>1. Party Directory (Master List)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width:20%">Party Name</th>
+                <th style="width:15%">GSTIN / PAN</th>
+                <th style="width:10%">Mobile</th>
+                <th>Address</th>
+            </tr>
+        </thead>
+        <tbody id="party-list">
+            <!-- Data will be loaded here -->
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <!-- PART 2: INVOICE REGISTER -->
+    <h2>2. Invoice Register (Bill Summary)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Inv No.</th>
+                <th>Party Name</th>
+                <th class="amt">Taxable Amt</th>
+                <th class="amt">GST (18%)</th>
+                <th class="amt">Total Amount</th>
+            </tr>
+        </thead>
+        <tbody id="invoice-list">
+            <!-- Data will be loaded here -->
+        </tbody>
+        <tfoot>
+            <tr style="background:#eee; font-weight:bold;">
+                <td colspan="3" style="text-align:right">GRAND TOTALS:</td>
+                <td id="tot-taxable" class="amt">0.00</td>
+                <td id="tot-gst" class="amt">0.00</td>
+                <td id="tot-grand" class="amt">0.00</td>
+            </tr>
+        </tfoot>
+    </table>
+
+    <div class="footer">
+        Generated on: <span id="gen-date"></span> | Confidential Business Report
+    </div>
+</div>
+
+<script>
+const API_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';
+const LOGIN_USER = 'ShreeBalaji';
+const LOGIN_PASS = 'ShreeBalaji';
+
+function getAuth(){
+  return {
+    username: sessionStorage.getItem('sb_user') || '',
+    password: sessionStorage.getItem('sb_pass') || ''
+  };
+}
+
+function applyLoginState(){
+  const auth = getAuth();
+  const ok = auth.username === LOGIN_USER && auth.password === LOGIN_PASS;
+  document.body.className = ok ? 'logged-in' : 'logged-out';
+  if(ok) generateReport();
+}
+
+function login(event){
+  event.preventDefault();
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if(username !== LOGIN_USER || password !== LOGIN_PASS){
+    alert('Invalid login');
+    return;
+  }
+  sessionStorage.setItem('sb_user', username);
+  sessionStorage.setItem('sb_pass', password);
+  applyLoginState();
+}
+
+async function api(action, payload={}){
+  const auth = getAuth();
+  const response = await fetch(API_URL, {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ action, ...auth, ...payload })
+  });
+  const result = await response.json().catch(() => ({}));
+  if(!response.ok) throw new Error(result.error || 'Request failed');
+  return result;
+}
+
+function fmt(n){
+    return (n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+}
+
+async function generateReport(){
+    document.getElementById('gen-date').textContent = new Date().toLocaleString();
+    const status = document.getElementById('db-status');
+    status.textContent = 'Fetching Invoices...';
+    
+    try {
+        const result = await api('listInvoices');
+        const rows = result.rows || [];
+        
+        const partyData = new Map();
+        let grandTaxable = 0, grandGst = 0, grandTotal = 0;
+        
+        const invTable = document.getElementById('invoice-list');
+        invTable.innerHTML = '';
+        
+        // Fetch full data for each invoice to get totals
+        for(const row of rows) {
+            status.textContent = `Loading ${row.invoice_no}...`;
+            const full = await api('loadInvoice', { invoiceNo: row.invoice_no });
+            const d = full.data || {};
+            
+            // Collect Party Data
+            if(d.billTo && d.billTo.name && !partyData.has(d.billTo.name)) {
+                partyData.set(d.billTo.name, d.billTo);
+            }
+            
+            // Calculate Invoice Totals (summing item amounts)
+            const items = d.items || [];
+            let taxable = 0;
+            items.forEach(it => {
+                taxable += parseFloat(String(it.amt || 0).replace(/,/g,'')) || 0;
+            });
+            
+            const gst = taxable * 0.18;
+            const total = taxable + gst;
+            
+            grandTaxable += taxable;
+            grandGst += gst;
+            grandTotal += total;
+            
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${d.invoice?.date || '-'}</td>
+                <td>${d.invoice?.no || '-'}</td>
+                <td>${d.billTo?.name || '-'}</td>
+                <td class="amt">${fmt(taxable)}</td>
+                <td class="amt">${fmt(gst)}</td>
+                <td class="amt">${fmt(total)}</td>
+            `;
+            invTable.appendChild(tr);
+        }
+        
+        // Update Grand Totals
+        document.getElementById('tot-taxable').textContent = fmt(grandTaxable);
+        document.getElementById('tot-gst').textContent = fmt(grandGst);
+        document.getElementById('tot-grand').textContent = fmt(grandTotal);
+        
+        // Fill Party List
+        const pTable = document.getElementById('party-list');
+        pTable.innerHTML = '';
+        [...partyData.values()].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td><b>${p.name}</b></td>
+                <td>${p.gstin || '-'}<br><small>${p.pan || '-'}</small></td>
+                <td>${p.mobile || '-'}</td>
+                <td>${p.address || '-'}</td>
+            `;
+            pTable.appendChild(tr);
+        });
+        
+        status.textContent = 'Report Ready';
+    } catch(e) {
+        console.error(e);
+        status.textContent = 'Error loading data';
+    }
+}
+
+applyLoginState();
+</script>
+</body>
+</html>
