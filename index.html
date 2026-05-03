@@ -1,1 +1,639 @@
-404: Not Found
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shree Balaji Tempo Services — GST Invoice Template</title>
+<style>
+/* ── RESET ── */
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;background:#e8e8e8;}
+
+/* ── TOOLBAR (hidden on print) ── */
+.toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
+.toolbar label{font-size:11px;color:#ccc;}
+.toolbar input[type=text],.toolbar input[type=date],.toolbar input[type=number]{background:#555;border:1px solid #666;color:#fff;padding:4px 8px;border-radius:3px;font-size:11px;width:auto;}
+.toolbar button{padding:6px 16px;border:none;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;transition:background 0.2s;}
+.btn-print{background:#4CAF50;color:#fff;}
+.btn-print:hover{background:#388E3C;}
+.btn-add{background:#2196F3;color:#fff;}
+.btn-add:hover{background:#1565C0;}
+.btn-clear{background:#f44336;color:#fff;}
+.btn-clear:hover{background:#c62828;}
+.btn-reset{background:#FF9800;color:#fff;}
+.btn-reset:hover{background:#E65100;}
+.toolbar .sep{width:1px;height:24px;background:#555;margin:0 4px;}
+.toolbar .tb-title{font-size:13px;font-weight:bold;color:#fff;margin-right:8px;}
+
+/* ── INVOICE WRAPPER ── */
+.page-wrap{padding:20px;display:flex;justify-content:center;}
+.inv{width:210mm;background:#fff;border:1px solid #bbb;}
+
+/* ── OM STRIP ── */
+.om{text-align:center;padding:5px 0 4px;border-bottom:1.5px solid #444;font-size:15px;font-weight:bold;letter-spacing:3px;color:#222;}
+
+/* ── TOP BAR ── */
+.top-bar{display:table;width:100%;padding:5px 8px;border-bottom:2px solid #444;}
+.tb-l{display:table-cell;vertical-align:middle;}
+.tb-r{display:table-cell;vertical-align:middle;text-align:right;}
+.ti{font-size:13px;font-weight:bold;letter-spacing:4px;color:#222;}
+.ob{border:1.5px solid #444;padding:2px 9px;font-size:8px;font-weight:bold;letter-spacing:1.5px;margin-left:10px;color:#333;}
+.ct{font-size:8.5px;letter-spacing:0.5px;color:#444;}
+
+/* ── COMPANY HEADER ── */
+.co-hdr{text-align:center;padding:8px 4px 6px;border-bottom:2.5px double #444;}
+.co-nm{font-size:20px;font-weight:bold;letter-spacing:2px;margin-bottom:3px;color:#222;}
+.co-ad{font-size:8.5px;color:#555;margin-bottom:2px;}
+.co-mt{font-size:9px;color:#333;}
+.co-mt span{margin:0 7px;}
+
+/* ── INVOICE INFO BAR ── */
+.ibar{display:table;width:calc(100% - 12px);margin:5px 6px;background:#f2f2f2;border:1px solid #bbb;border-left:4px solid #444;padding:5px 9px;}
+.ibar-c{display:table-cell;font-size:9px;color:#222;vertical-align:middle;}
+.ibar input{border:none;background:transparent;font-size:9px;color:#222;font-family:Arial,sans-serif;font-weight:bold;width:130px;outline:none;border-bottom:1px dashed #aaa;}
+.ibar input:focus{border-bottom:1px solid #333;background:#fff8dc;}
+
+/* ── ADDRESS SECTION ── */
+.adr-t{width:calc(100% - 12px);margin:5px 6px;border-collapse:collapse;}
+.adr-c{width:50%;vertical-align:top;padding:0 3px 0 0;}
+.adr-c2{width:50%;vertical-align:top;padding:0 0 0 3px;}
+.adr-box{border:1px solid #bbb;height:100%;}
+.adr-h{background:#333;color:#fff;font-size:8px;font-weight:bold;padding:3px 7px;letter-spacing:1px;}
+.adr-b{padding:5px 7px;}
+.adr-co{font-size:11px;font-weight:bold;margin-bottom:2px;color:#222;}
+.adr-ln{font-size:8.5px;color:#444;margin-bottom:1px;}
+.editable{outline:none;min-height:12px;display:inline-block;min-width:40px;}
+.editable:focus{background:#fff8dc;border-radius:2px;}
+[contenteditable="true"]:empty:before{content:attr(data-placeholder);color:#bbb;font-style:italic;}
+
+/* ── SECTION TITLE ── */
+.sec-h{font-size:9px;font-weight:bold;background:#ebebeb;border:1px solid #bbb;border-left:4px solid #444;padding:3px 9px;margin:6px 6px 0;letter-spacing:0.5px;color:#222;}
+.px6{padding:0 6px;}
+
+/* ── ITEMS TABLE ── */
+table.it{width:100%;border-collapse:collapse;}
+table.it th{background:#444;color:#fff;padding:6px 3px;text-align:center;border:1px solid #555;font-size:7.5px;font-weight:bold;vertical-align:middle;}
+table.it th.l{text-align:left;padding-left:5px;}
+table.it td{padding:2px 3px;border:1px solid #d0d0d0;font-size:8.5px;height:19px;color:#222;vertical-align:middle;}
+table.it td.c{text-align:center;}
+table.it td.r{text-align:right;}
+table.it td.del-cell{text-align:center;width:18px;background:#fff8f8;}
+table.it tr:nth-child(even) td{background:#f8f8f8;}
+table.it tr:nth-child(even) td.del-cell{background:#fff8f8;}
+table.it tr.sub td{background:#e8e8e8!important;font-weight:bold;border-top:2px solid #444;font-size:9px;color:#222;}
+
+/* ── ITEM INPUTS ── */
+.it-input{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:8.5px;color:#222;outline:none;text-align:inherit;padding:1px 2px;}
+.it-input:focus{background:#fff8dc;}
+.it-input.num{text-align:right;}
+.it-input.ctr{text-align:center;}
+.amt-cell{text-align:right;font-weight:600;padding-right:5px;}
+.amt-wrap{display:flex;align-items:center;justify-content:flex-end;gap:2px;}
+.amt-prefix{font-weight:600;color:#222;}
+.amt-prefix:empty{display:none;}
+.amt-input{font-weight:600;text-align:right;width:64px;max-width:64px;}
+
+/* ── DEL BUTTON ── */
+.del-btn{background:none;border:none;color:#cc0000;cursor:pointer;font-size:11px;font-weight:bold;padding:0 3px;opacity:0.6;}
+.del-btn:hover{opacity:1;}
+
+/* ── HSN TABLE ── */
+table.hs{width:100%;border-collapse:collapse;}
+table.hs th{background:#555;color:#fff;padding:5px 4px;text-align:center;border:1px solid #666;font-size:7.5px;font-weight:bold;vertical-align:middle;}
+table.hs td{padding:5px 4px;border:1px solid #d0d0d0;text-align:center;font-size:8.5px;color:#222;}
+table.hs tr.ht td{background:#e8e8e8;font-weight:bold;border-top:2px solid #444;color:#222;}
+.hsn-input{border:none;background:transparent;font-family:Arial,sans-serif;font-size:8.5px;color:#222;outline:none;text-align:center;width:60px;}
+.hsn-input:focus{background:#fff8dc;}
+
+/* ── BOTTOM TABLE ── */
+.btm-t{width:calc(100% - 12px);margin:6px 6px 6px;border-collapse:collapse;}
+.bl{vertical-align:top;padding-right:5px;}
+.br{width:192px;vertical-align:top;}
+
+/* ── BOX ── */
+.bx{border:1px solid #bbb;margin-bottom:5px;}
+.bx-h{background:#333;color:#fff;font-size:8px;font-weight:bold;padding:3px 7px;}
+.bx-b{padding:5px 7px;}
+table.bkr{width:100%;border-collapse:collapse;}
+table.bkr td{font-size:8.5px;padding:1px 0;color:#333;}
+.bkl{font-weight:bold;width:80px;color:#222;}
+
+/* ── T&C ── */
+.tc p{font-size:8px;color:#555;margin-bottom:2px;}
+
+/* ── AMOUNT IN WORDS ── */
+.amw{border:1px solid #bbb;padding:5px 7px;background:#fafafa;margin-top:5px;}
+.amw-l{font-weight:bold;font-size:8px;margin-bottom:1px;color:#333;}
+.amw-v{font-style:italic;font-size:9px;color:#333;}
+
+/* ── TAX SUMMARY ── */
+.txb{border:1px solid #bbb;margin-bottom:5px;}
+.txh{background:#ebebeb;font-weight:bold;font-size:9px;padding:4px 7px;border-bottom:1px solid #bbb;text-align:center;letter-spacing:0.5px;color:#222;}
+table.tx{width:100%;border-collapse:collapse;}
+table.tx td{padding:4px 7px;font-size:9px;border-bottom:1px solid #eee;color:#333;}
+table.tx td.tl{color:#444;}
+table.tx td.ta{text-align:right;font-weight:bold;color:#222;white-space:nowrap;}
+tr.tt td{background:#444!important;color:#fff!important;font-weight:bold!important;font-size:10px!important;border-bottom:none!important;}
+tr.tr2 td{background:#f2f2f2;}
+tr.tb td{background:#e8e8e8;font-weight:bold;}
+.rcvd-input{border:none;background:transparent;font-family:Arial,sans-serif;font-size:9px;font-weight:bold;color:#222;outline:none;text-align:right;width:48px;max-width:48px;}
+.rcvd-input:focus{background:#fff8dc;}
+
+/* ── SIGNATORY ── */
+.sg{border:1px solid #bbb;padding:6px 7px;text-align:right;min-height:65px;}
+.sg-n{font-size:7.5px;color:#aaa;font-style:italic;}
+.sg-dl{border-top:1px dashed #bbb;width:110px;margin-left:auto;margin-top:36px;margin-bottom:3px;}
+.sg-f{font-size:8px;color:#555;}
+.sg-c{font-weight:bold;font-size:9.5px;color:#222;}
+
+/* ── RATE FIELD ── */
+.rate-wrap{display:flex;align-items:center;justify-content:center;gap:1px;}
+
+/* ═══════════════════════════════════════
+   PRINT STYLES
+═══════════════════════════════════════ */
+@media print {
+  @page{size:A4;margin:8mm 8mm;}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+  body{background:#fff;}
+  .toolbar{display:none!important;}
+  .page-wrap{padding:0;}
+  .inv{border:none;width:100%;}
+  .del-cell{display:none!important;}
+  .del-btn{display:none!important;}
+  .it-input,.hsn-input,.rcvd-input{border:none!important;background:transparent!important;}
+  .it-input::placeholder,.hsn-input::placeholder,.rcvd-input::placeholder{color:transparent!important;}
+  .it-input::-webkit-input-placeholder,.hsn-input::-webkit-input-placeholder,.rcvd-input::-webkit-input-placeholder{color:transparent!important;}
+  .ibar input{border-bottom:none!important;background:transparent!important;}
+  [contenteditable="true"]:empty:before{content:'';}
+  .editable:focus,.it-input:focus,.ibar input:focus,.hsn-input:focus,.rcvd-input:focus{background:transparent!important;}
+  table.it tr:nth-child(even) td.del-cell{display:none!important;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════════ TOOLBAR ══════════════ -->
+<div class="toolbar no-print">
+  <span class="tb-title">⚡ Invoice Entry</span>
+  <div class="sep"></div>
+  <label>GST Rate %
+    <input type="number" id="gst-rate" value="18" min="0" max="28" step="0.1" style="width:50px;" oninput="updateTotals()">
+  </label>
+  <div class="sep"></div>
+  <button class="btn-add" onclick="addRow()">+ Add Row</button>
+  <button class="btn-add" onclick="copyBillToShip()">Bill = Ship</button>
+  <button class="btn-reset" onclick="resetForm()">↺ New Invoice</button>
+  <button class="btn-clear" onclick="clearItems()">✕ Clear Items</button>
+  <div class="sep"></div>
+  <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
+</div>
+
+<!-- ══════════════ INVOICE PAGE ══════════════ -->
+<div class="page-wrap">
+<div class="inv" id="invoice">
+
+  <!-- OM -->
+  <div class="om">ॐ श्री गणेशाय नमः</div>
+
+  <!-- TOP BAR -->
+  <div class="top-bar">
+    <div class="tb-l">
+      <span class="ti">TAX INVOICE</span>
+      <span class="ob">ORIGINAL FOR RECIPIENT</span>
+    </div>
+    <div class="tb-r">
+      <span class="ct">TRANSPORT CONTRACTORS &amp; COMMISSION AGENTS</span>
+    </div>
+  </div>
+
+  <!-- COMPANY HEADER -->
+  <div class="co-hdr">
+    <div class="co-nm">SHREE BALAJI TEMPO SERVICES</div>
+    <div class="co-ad">401, Satyam-A, Siddhi Vinayak Residency, Station Road, Sachin, Surat, Gujarat – 394230</div>
+    <div class="co-mt">
+      <span><b>Mobile:</b> 9427135723</span>
+      <span><b>GSTIN:</b> 24ASDPS5710Q1ZB</span>
+      <span><b>PAN:</b> ASDPS5710Q</span>
+      <span><b>State:</b> Gujarat (24)</span>
+    </div>
+  </div>
+
+  <!-- INVOICE INFO BAR -->
+  <div class="ibar">
+    <div class="ibar-c"><b>Invoice No.:</b>&nbsp; <input type="text" id="inv-no" value="INV/2627/001" style="width:110px;"></div>
+    <div class="ibar-c" style="text-align:center;"><b>Invoice Date:</b>&nbsp; <input type="text" id="inv-date" value="30/04/2026" style="width:80px;"></div>
+    <div class="ibar-c" style="text-align:center;"><b>Place of Supply:</b>&nbsp; <input type="text" id="inv-pos" value="Gujarat (24)" style="width:85px;"></div>
+    <div class="ibar-c" style="text-align:right;"><b>Reverse Charge:</b>&nbsp; <input type="text" id="inv-rc" value="No" style="width:30px;text-align:center;"></div>
+  </div>
+
+  <!-- ADDRESSES -->
+  <table class="adr-t">
+  <tr>
+    <td class="adr-c">
+      <div class="adr-box">
+        <div class="adr-h">▶ BILL TO</div>
+        <div class="adr-b">
+          <div class="adr-co editable" id="bill-name" contenteditable="true" data-placeholder="Party Name">SHIVAM PACKAGING</div>
+          <div class="adr-ln editable" id="bill-address" contenteditable="true" data-placeholder="Address Line 1" style="margin-top:2px;">PLOT NO-SPL-123,129/18,19, FIRST FLOOR, I ZONE GIDC, SACHIN, Surat, Gujarat – 394230</div>
+          <div class="adr-ln" style="margin-top:2px;">
+            <b>Mobile:</b> <span class="editable" contenteditable="true" data-placeholder="Mobile">9429892099</span>
+            &nbsp;|&nbsp; <b>GSTIN:</b> <span class="editable" contenteditable="true" data-placeholder="GSTIN">24ADKFS6457N1ZC</span>
+            &nbsp;|&nbsp; <b>PAN:</b> <span class="editable" contenteditable="true" data-placeholder="PAN">ADKFS6457N</span>
+          </div>
+          <div class="adr-ln"><b>Place of Supply:</b> <span class="editable" contenteditable="true" data-placeholder="State">Gujarat (24)</span></div>
+        </div>
+      </div>
+    </td>
+    <td class="adr-c2">
+      <div class="adr-box">
+        <div class="adr-h">▶ SHIP TO</div>
+        <div class="adr-b">
+          <div class="adr-co editable" id="ship-name" contenteditable="true" data-placeholder="Party Name">SHIVAM PACKAGING</div>
+          <div class="adr-ln editable" id="ship-address" contenteditable="true" data-placeholder="Delivery Address" style="margin-top:2px;">Plot No. SPL-123+129/18,19, First Floor, GIDC, Sachin, Surat, Gujarat – 394230</div>
+        </div>
+      </div>
+    </td>
+  </tr>
+  </table>
+
+  <!-- ITEMS TABLE -->
+  <div class="sec-h">▼ &nbsp;PARTICULARS OF GOODS / SERVICES</div>
+  <div class="px6">
+  <table class="it" id="items-table">
+    <thead>
+      <tr>
+        <th class="del-cell no-print" style="width:18px;background:#444;"></th>
+        <th style="width:4%">SR.<br>NO.</th>
+        <th style="width:9%">DATE</th>
+        <th class="l" style="width:21%">DESCRIPTION OF GOODS / SERVICES</th>
+        <th style="width:10%">LR NO.</th>
+        <th style="width:10%">BILL NO.</th>
+        <th style="width:16%">QUANTITY</th>
+        <th style="width:10%">RATE<br>(₹/KG)</th>
+        <th style="width:17%">TAXABLE<br>AMOUNT (₹)</th>
+      </tr>
+    </thead>
+    <tbody id="items-body">
+      <!-- Rows injected by JS -->
+    </tbody>
+    <tfoot>
+      <tr class="sub">
+        <td class="del-cell no-print" style="border:none;background:#e8e8e8;"></td>
+        <td colspan="4" class="c">SUBTOTAL</td>
+        <td class="c" id="total-qty-cell">—</td>
+        <td class="c" id="total-unit-cell"></td>
+        <td class="c">—</td>
+        <td class="r" id="total-taxable-cell">₹ 0.00</td>
+      </tr>
+    </tfoot>
+  </table>
+  </div>
+
+  <!-- HSN SUMMARY -->
+  <div class="sec-h">▼ &nbsp;HSN / SAC WISE TAX SUMMARY</div>
+  <div class="px6">
+  <table class="hs">
+    <thead>
+      <tr>
+        <th>HSN/SAC<br>CODE</th>
+        <th>DESCRIPTION</th>
+        <th>TAXABLE<br>VALUE (₹)</th>
+        <th>CGST<br>RATE</th>
+        <th>CGST<br>AMT (₹)</th>
+        <th>SGST<br>RATE</th>
+        <th>SGST<br>AMT (₹)</th>
+        <th>TOTAL<br>TAX (₹)</th>
+        <th>GROSS<br>AMOUNT (₹)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><input class="hsn-input" id="hsn-code" value="9965"></td>
+        <td><span class="editable" contenteditable="true" data-placeholder="Description" style="min-width:80px;">PAPER REEL (Transport Services)</span></td>
+        <td id="hsn-taxable">0.00</td>
+        <td id="hsn-cgst-rate">9%</td>
+        <td id="hsn-cgst-amt">0.00</td>
+        <td id="hsn-sgst-rate">9%</td>
+        <td id="hsn-sgst-amt">0.00</td>
+        <td id="hsn-total-tax">0.00</td>
+        <td id="hsn-gross"><b>0.00</b></td>
+      </tr>
+      <tr class="ht">
+        <td colspan="2"><b>TOTAL</b></td>
+        <td id="hsn-tot-taxable"><b>0.00</b></td>
+        <td>—</td>
+        <td id="hsn-tot-cgst"><b>0.00</b></td>
+        <td>—</td>
+        <td id="hsn-tot-sgst"><b>0.00</b></td>
+        <td id="hsn-tot-tax"><b>0.00</b></td>
+        <td id="hsn-tot-gross"><b>0.00</b></td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+
+  <!-- BOTTOM SECTION -->
+  <table class="btm-t">
+  <tr>
+    <td class="bl">
+      <!-- BANK DETAILS -->
+      <div class="bx">
+        <div class="bx-h">▶ BANK DETAILS</div>
+        <div class="bx-b">
+          <table class="bkr">
+            <tr><td class="bkl">Account Name</td><td>: &nbsp;Rajendra Sharma</td></tr>
+            <tr><td class="bkl">Account No.</td><td>: &nbsp;218705500445</td></tr>
+            <tr><td class="bkl">IFSC Code</td><td>: &nbsp;ICIC0002187</td></tr>
+            <tr><td class="bkl">Bank &amp; Branch</td><td>: &nbsp;ICICI Bank, Sachin</td></tr>
+          </table>
+        </div>
+      </div>
+      <!-- T&C -->
+      <div class="bx">
+        <div class="bx-h">▶ TERMS &amp; CONDITIONS</div>
+        <div class="bx-b">
+          <div class="tc">
+            <p>1. Goods once sold will not be taken back or exchanged.</p>
+            <p>2. All disputes are subject to Surat jurisdiction only.</p>
+            <p>3. Payment is due within the agreed credit period.</p>
+          </div>
+        </div>
+      </div>
+      <!-- AMOUNT IN WORDS -->
+      <div class="amw">
+        <div class="amw-l">TOTAL AMOUNT IN WORDS:</div>
+        <div class="amw-v" id="amount-words">Zero Rupees Only</div>
+      </div>
+    </td>
+
+    <td class="br">
+      <!-- TAX SUMMARY -->
+      <div class="txb">
+        <div class="txh">▼ TAX SUMMARY</div>
+        <table class="tx">
+          <tr><td class="tl">Taxable Amount</td><td class="ta" id="sum-taxable">₹ 0.00</td></tr>
+          <tr><td class="tl" id="sum-cgst-lbl">CGST @ 9%</td><td class="ta" id="sum-cgst">₹ 0.00</td></tr>
+          <tr><td class="tl" id="sum-sgst-lbl">SGST @ 9%</td><td class="ta" id="sum-sgst">₹ 0.00</td></tr>
+          <tr class="tt"><td class="tl">TOTAL AMOUNT</td><td class="ta" id="sum-total">₹ 0.00</td></tr>
+          <tr class="tr2">
+            <td class="tl">Received Amount</td>
+            <td class="ta">₹&nbsp;<input class="rcvd-input" id="rcvd-amt" type="number" value="0" min="0" step="0.01" oninput="updateBalance()"></td>
+          </tr>
+          <tr class="tb"><td class="tl">BALANCE DUE</td><td class="ta" id="sum-balance">₹ 0.00</td></tr>
+        </table>
+      </div>
+      <!-- SIGNATORY -->
+      <div class="sg">
+        <div class="sg-n">Authorised Signatory</div>
+        <div>
+          <div class="sg-dl"></div>
+          <div class="sg-f">For,</div>
+          <div class="sg-c">SHREE BALAJI TEMPO SERVICES</div>
+        </div>
+      </div>
+    </td>
+  </tr>
+  </table>
+
+</div><!-- end .inv -->
+</div><!-- end .page-wrap -->
+
+<script>
+// ─── CONFIG ───
+const DEFAULT_ROWS = 12;
+const PREFILLED = [
+  {desc:'PAPER REEL', lr:'', bill:'3',  qty:'13016', unit:'KGS', rate:'0.18'},
+  {desc:'PAPER REEL', lr:'', bill:'12', qty:'13040', unit:'KGS', rate:'0.18'},
+  {desc:'PAPER REEL', lr:'', bill:'24', qty:'12608', unit:'KGS', rate:'0.18'},
+  {desc:'PAPER REEL', lr:'', bill:'53', qty:'11265', unit:'KGS', rate:'0.18'},
+  {desc:'PAPER REEL', lr:'', bill:'114',qty:'12769', unit:'KGS', rate:'0.18'},
+  {desc:'PAPER REEL', lr:'', bill:'248',qty:'13353', unit:'KGS', rate:'0.18'},
+];
+
+let rowCount = 0;
+
+// ─── FORMAT NUMBER ───
+function fmt(n){
+  return n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+// ─── AMOUNT IN WORDS (Indian System) ───
+function toWords(n){
+  n = Math.round(n);
+  if(n===0) return 'Zero Rupees Only';
+  const ones=['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen','Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens=['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  function h(n){
+    if(n===0)return '';
+    if(n<20)return ones[n]+' ';
+    if(n<100)return tens[Math.floor(n/10)]+' '+(ones[n%10]?ones[n%10]+' ':'');
+    return ones[Math.floor(n/100)]+' Hundred '+(n%100?h(n%100):'');
+  }
+  let r='',x=n;
+  if(x>=10000000){r+=h(Math.floor(x/10000000))+'Crore ';x%=10000000;}
+  if(x>=100000){r+=h(Math.floor(x/100000))+'Lakh ';x%=100000;}
+  if(x>=1000){r+=h(Math.floor(x/1000))+'Thousand ';x%=1000;}
+  r+=h(x);
+  return 'Rupees '+r.trim()+' Only';
+}
+
+// ─── CREATE ROW ───
+function createRow(data={}){
+  rowCount++;
+  const idx = rowCount;
+  const tr = document.createElement('tr');
+  if(idx%2===0) tr.classList.add('ev');
+  tr.dataset.idx = idx;
+
+  const qty  = data.qty||'';
+  const rate = data.rate||'';
+  const amt  = (qty && rate) ? (parseFloat(qty)*parseFloat(rate)).toFixed(2) : '';
+
+  tr.innerHTML = `
+    <td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Delete row">✕</button></td>
+    <td class="c" style="font-size:8px;color:#888;">${idx}</td>
+    <td class="c"><input class="it-input ctr" placeholder="Date" value="${data.date||''}"></td>
+    <td><input class="it-input" placeholder="Description…" value="${data.desc||''}"></td>
+    <td class="c"><input class="it-input ctr" placeholder="LR No." value="${data.lr||''}"></td>
+    <td class="c"><input class="it-input ctr" placeholder="Bill No." value="${data.bill||''}"></td>
+    <td class="c">
+      <div class="rate-wrap">
+        <input class="it-input num" data-role="qty" placeholder="0" value="${qty}" style="width:55px;" oninput="calcRow(this)">
+        <input class="it-input ctr" placeholder="Unit" value="${data.unit||''}" style="width:32px;font-size:7.5px;color:#666;">
+      </div>
+    </td>
+    <td class="c"><input class="it-input num" data-role="rate" placeholder="0.00" value="${rate}" style="width:100%;" oninput="calcRow(this)"></td>
+    <td class="amt-cell" data-amt="${amt}">
+      <div class="amt-wrap">
+        <span class="amt-prefix">${amt ? '₹' : ''}</span>
+        <input class="it-input num amt-input" data-role="amt" placeholder="0.00" value="${amt ? fmt(parseFloat(amt)) : ''}" oninput="calcRow(this)">
+      </div>
+    </td>
+  `;
+  return tr;
+}
+
+// ─── CALC INDIVIDUAL ROW ───
+function calcRow(input){
+  const tr = input.closest('tr');
+  const qtyInput = tr.querySelector('input[data-role="qty"]');
+  const rateInput = tr.querySelector('input[data-role="rate"]');
+  const amtInput = tr.querySelector('input[data-role="amt"]');
+  let qty  = parseFloat((qtyInput.value||'').replace(/,/g,''))||0;
+  let rate = parseFloat((rateInput.value||'').replace(/,/g,''))||0;
+  let amt  = parseFloat((amtInput.value||'').replace(/,/g,''))||0;
+
+  if(input.dataset.role==='amt'){
+    if(qty>0) {
+      rate = amt / qty;
+      rateInput.value = rate>0 ? rate.toFixed(2) : '';
+    } else if(rate>0) {
+      qty = amt / rate;
+      qtyInput.value = qty>0 ? Math.round(qty).toString() : '';
+    }
+  } else if(input.dataset.role==='qty'){
+    if(rate>0) {
+      amt = qty * rate;
+      amtInput.value = amt>0 ? fmt(amt) : '';
+    } else if(amt>0 && qty>0) {
+      rate = amt / qty;
+      rateInput.value = rate>0 ? rate.toFixed(2) : '';
+    }
+  } else if(input.dataset.role==='rate'){
+    if(qty>0) {
+      amt = qty * rate;
+      amtInput.value = amt>0 ? fmt(amt) : '';
+    } else if(amt>0 && rate>0) {
+      qty = amt / rate;
+      qtyInput.value = qty>0 ? Math.round(qty).toString() : '';
+    }
+  }
+
+  const amtCell = tr.querySelector('.amt-cell');
+  const prefix = tr.querySelector('.amt-prefix');
+  amtCell.dataset.amt = amt>0 ? amt.toFixed(2) : '';
+  prefix.textContent = amt>0 ? '₹' : '';
+  updateTotals();
+}
+
+// ─── DELETE ROW ───
+function delRow(btn){
+  const tr = btn.closest('tr');
+  tr.remove();
+  updateTotals();
+  renumberRows();
+}
+
+// ─── RENUMBER ───
+function renumberRows(){
+  document.querySelectorAll('#items-body tr').forEach((tr,i)=>{
+    const sn = tr.querySelector('td:nth-child(2)');
+    if(sn) sn.textContent = i+1;
+    tr.className = (i+1)%2===0 ? 'ev' : '';
+  });
+}
+
+// ─── ADD ROW ───
+function addRow(data={}){
+  document.getElementById('items-body').appendChild(createRow(data));
+  updateTotals();
+}
+
+// ─── COPY BILL TO ADDRESS INTO SHIP TO ───
+function copyBillToShip(){
+  document.getElementById('ship-name').textContent = document.getElementById('bill-name').textContent.trim();
+  document.getElementById('ship-address').textContent = document.getElementById('bill-address').textContent.trim();
+}
+
+// ─── UPDATE ALL TOTALS ───
+function updateTotals(){
+  let totalQty=0, totalAmt=0, hasQty=false;
+  let unit='';
+  document.querySelectorAll('#items-body tr').forEach(tr=>{
+    const qtyInput = tr.querySelector('input[data-role="qty"]');
+    if(qtyInput){
+      const q=parseFloat((qtyInput.value||'').replace(/,/g,''))||0;
+      if(q>0){totalQty+=q;hasQty=true;}
+      const unitI = tr.querySelectorAll('input.it-input.ctr');
+      if(unitI.length>=2) unit=unitI[1].value||'KGS';
+    }
+    const amtCell=tr.querySelector('.amt-cell');
+    if(amtCell) totalAmt+=parseFloat(amtCell.dataset.amt||0)||0;
+  });
+
+  const gstRate = parseFloat(document.getElementById('gst-rate').value)||18;
+  const halfRate = gstRate/2;
+  const cgst = totalAmt * halfRate/100;
+  const sgst = totalAmt * halfRate/100;
+  const total = totalAmt + cgst + sgst;
+  const rcvd  = parseFloat(document.getElementById('rcvd-amt').value)||0;
+  const bal   = total - rcvd;
+
+  // Subtotal row
+  document.getElementById('total-qty-cell').textContent = hasQty ? totalQty.toLocaleString('en-IN') : '—';
+  document.getElementById('total-unit-cell').textContent = hasQty ? unit : '';
+  document.getElementById('total-taxable-cell').textContent = '₹ '+fmt(totalAmt);
+
+  // HSN row
+  ['hsn-taxable','hsn-tot-taxable'].forEach(id=>document.getElementById(id).innerHTML=(id.includes('tot')?'<b>':'')+fmt(totalAmt)+(id.includes('tot')?'</b>':''));
+  ['hsn-cgst-rate','hsn-sgst-rate'].forEach(id=>document.getElementById(id).textContent=halfRate+'%');
+  ['hsn-cgst-amt','hsn-tot-cgst'].forEach(id=>document.getElementById(id).innerHTML=(id.includes('tot')?'<b>':'')+fmt(cgst)+(id.includes('tot')?'</b>':''));
+  ['hsn-sgst-amt','hsn-tot-sgst'].forEach(id=>document.getElementById(id).innerHTML=(id.includes('tot')?'<b>':'')+fmt(sgst)+(id.includes('tot')?'</b>':''));
+  ['hsn-total-tax','hsn-tot-tax'].forEach(id=>document.getElementById(id).innerHTML=(id.includes('tot')?'<b>':'')+fmt(cgst+sgst)+(id.includes('tot')?'</b>':''));
+  ['hsn-gross','hsn-tot-gross'].forEach(id=>document.getElementById(id).innerHTML='<b>'+fmt(total)+'</b>');
+
+  // Tax summary
+  document.getElementById('sum-taxable').textContent='₹ '+fmt(totalAmt);
+  document.getElementById('sum-cgst-lbl').textContent='CGST @ '+halfRate+'%';
+  document.getElementById('sum-sgst-lbl').textContent='SGST @ '+halfRate+'%';
+  document.getElementById('sum-cgst').textContent='₹ '+fmt(cgst);
+  document.getElementById('sum-sgst').textContent='₹ '+fmt(sgst);
+  document.getElementById('sum-total').textContent='₹ '+fmt(total);
+  document.getElementById('sum-balance').textContent='₹ '+fmt(bal<0?0:bal);
+
+  // Amount in words
+  document.getElementById('amount-words').textContent=toWords(Math.round(total));
+}
+
+// ─── UPDATE BALANCE ───
+function updateBalance(){updateTotals();}
+
+// ─── CLEAR ITEMS (keep rows blank) ───
+function clearItems(){
+  if(!confirm('Clear all item entries?')) return;
+  document.getElementById('items-body').innerHTML='';
+  rowCount=0;
+  for(let i=0;i<DEFAULT_ROWS;i++) addRow();
+  document.getElementById('rcvd-amt').value='0';
+}
+
+// ─── RESET FORM ───
+function resetForm(){
+  if(!confirm('Start a new invoice? All entries will be cleared.')) return;
+  // Increment invoice number
+  const invNo=document.getElementById('inv-no');
+  const m=invNo.value.match(/INV\/(\d+)\/(\d+)/);
+  if(m) invNo.value='INV/'+m[1]+'/'+(String(parseInt(m[2])+1).padStart(3,'0'));
+  // Set today's date
+  const today=new Date();
+  document.getElementById('inv-date').value=
+    String(today.getDate()).padStart(2,'0')+'/'+
+    String(today.getMonth()+1).padStart(2,'0')+'/'+
+    today.getFullYear();
+  clearItems();
+}
+
+// ─── INIT ───
+(function init(){
+  const body=document.getElementById('items-body');
+  // Add prefilled rows
+  PREFILLED.forEach(d=>body.appendChild(createRow(d)));
+  // Fill remaining blank rows to reach DEFAULT_ROWS
+  const remaining=DEFAULT_ROWS-PREFILLED.length;
+  for(let i=0;i<remaining;i++) body.appendChild(createRow());
+  updateTotals();
+})();
+</script>
+</body>
+</html>
