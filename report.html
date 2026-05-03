@@ -15,9 +15,14 @@ body{font-family:Arial,sans-serif;font-size:11px;color:#222;background:#f0f0f0;p
 .login-box button{width:100%;padding:10px;background:#333;color:#fff;border:none;cursor:pointer;}
 .logged-in .login-screen{display:none;}
 
-.toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:15px;margin-bottom:20px;border-radius:4px;}
+.toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:15px;margin-bottom:20px;border-radius:4px;flex-wrap:wrap;}
 .toolbar a{color:#fff;text-decoration:none;font-weight:bold;font-size:11px;}
 .db-status{margin-left:auto;font-size:10px;color:#ccc;}
+
+/* Filter Controls */
+.controls{background:#444;padding:10px 20px;display:flex;gap:15px;align-items:center;border-radius:4px;margin-bottom:20px;flex-wrap:wrap;}
+.controls label{font-size:10px;font-weight:bold;color:#ddd;text-transform:uppercase;}
+.controls select, .controls input{background:#fff;border:1px solid #ccc;padding:5px;font-size:11px;border-radius:3px;outline:none;}
 
 .container{max-width:210mm;margin:0 auto;background:#fff;padding:15mm;box-shadow:0 0 10px rgba(0,0,0,0.1);min-height:297mm;}
 h1{text-align:center;font-size:22px;margin-bottom:5px;text-transform:uppercase;letter-spacing:2px;}
@@ -34,7 +39,7 @@ tr:nth-child(even){background:#fafafa;}
 
 @media print {
     body{background:#fff;padding:0;}
-    .toolbar, .no-print{display:none;}
+    .toolbar, .controls, .no-print{display:none;}
     .container{box-shadow:none;margin:0;width:100%;max-width:none;padding:10mm;}
     .page-break{page-break-before:always;}
 }
@@ -60,25 +65,61 @@ tr:nth-child(even){background:#fafafa;}
     <div class="db-status" id="db-status">Loading data...</div>
 </div>
 
+<div class="controls no-print">
+    <div>
+        <label>Company:</label>
+        <select id="filter-company" onchange="applyFilters()">
+            <option value="">All Companies</option>
+        </select>
+    </div>
+    <div>
+        <label>Month:</label>
+        <select id="filter-month" onchange="applyFilters()">
+            <option value="">All Months</option>
+            <option value="01">January</option>
+            <option value="02">February</option>
+            <option value="03">March</option>
+            <option value="04">April</option>
+            <option value="05">May</option>
+            <option value="06">June</option>
+            <option value="07">July</option>
+            <option value="08">August</option>
+            <option value="09">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+        </select>
+    </div>
+    <div>
+        <label>Sort By:</label>
+        <select id="sort-order" onchange="applyFilters()">
+            <option value="date-new">Date (New to Old)</option>
+            <option value="date-old">Date (Old to New)</option>
+            <option value="amt-high">Amount (High to Low)</option>
+            <option value="amt-low">Amount (Low to High)</option>
+        </select>
+    </div>
+</div>
+
 <div class="container">
     <h1>Shree Balaji Tempo Services</h1>
     <div class="rpt-info">Business Data Summary Report — As of 30/04/2026</div>
 
     <!-- PART 1: PARTY DIRECTORY -->
-    <h2>1. Party Directory (Master List)</h2>
-    <table>
-        <thead>
-            <tr>
-                <th style="width:20%">Party Name</th>
-                <th style="width:15%">GSTIN / PAN</th>
-                <th style="width:10%">Mobile</th>
-                <th>Address</th>
-            </tr>
-        </thead>
-        <tbody id="party-list">
-            <!-- Data will be loaded here -->
-        </tbody>
-    </table>
+    <div id="section-parties">
+        <h2>1. Party Directory (Filtered List)</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width:20%">Party Name</th>
+                    <th style="width:15%">GSTIN / PAN</th>
+                    <th style="width:10%">Mobile</th>
+                    <th>Address</th>
+                </tr>
+            </thead>
+            <tbody id="party-list"></tbody>
+        </table>
+    </div>
 
     <div class="page-break"></div>
 
@@ -95,9 +136,7 @@ tr:nth-child(even){background:#fafafa;}
                 <th class="amt">Total Amount</th>
             </tr>
         </thead>
-        <tbody id="invoice-list">
-            <!-- Data will be loaded here -->
-        </tbody>
+        <tbody id="invoice-list"></tbody>
         <tfoot>
             <tr style="background:#eee; font-weight:bold;">
                 <td colspan="3" style="text-align:right">GRAND TOTALS:</td>
@@ -118,6 +157,8 @@ const API_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebala
 const LOGIN_USER = 'ShreeBalaji';
 const LOGIN_PASS = 'ShreeBalaji';
 
+let reportData = []; // To store all loaded invoice details
+
 function getAuth(){
   return {
     username: sessionStorage.getItem('sb_user') || '',
@@ -129,7 +170,7 @@ function applyLoginState(){
   const auth = getAuth();
   const ok = auth.username === LOGIN_USER && auth.password === LOGIN_PASS;
   document.body.className = ok ? 'logged-in' : 'logged-out';
-  if(ok) generateReport();
+  if(ok) loadAllData();
 }
 
 function login(event){
@@ -161,7 +202,14 @@ function fmt(n){
     return (n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
 }
 
-async function generateReport(){
+// Convert DD/MM/YYYY to Date object for sorting
+function parseDate(str) {
+    if(!str) return new Date(0);
+    const parts = str.split('/');
+    return new Date(parts[2], parts[1]-1, parts[0]);
+}
+
+async function loadAllData(){
     document.getElementById('gen-date').textContent = new Date().toLocaleString();
     const status = document.getElementById('db-status');
     status.textContent = 'Fetching Invoices...';
@@ -169,74 +217,123 @@ async function generateReport(){
     try {
         const result = await api('listInvoices');
         const rows = result.rows || [];
+        reportData = [];
         
-        const partyData = new Map();
-        let grandTaxable = 0, grandGst = 0, grandTotal = 0;
+        const partyNames = new Set();
         
-        const invTable = document.getElementById('invoice-list');
-        invTable.innerHTML = '';
-        
-        // Fetch full data for each invoice to get totals
         for(const row of rows) {
             status.textContent = `Loading ${row.invoice_no}...`;
             const full = await api('loadInvoice', { invoiceNo: row.invoice_no });
             const d = full.data || {};
             
-            // Collect Party Data
-            if(d.billTo && d.billTo.name && !partyData.has(d.billTo.name)) {
-                partyData.set(d.billTo.name, d.billTo);
-            }
-            
-            // Calculate Invoice Totals (summing item amounts)
-            const items = d.items || [];
+            // Calculate totals
             let taxable = 0;
-            items.forEach(it => {
+            (d.items || []).forEach(it => {
                 taxable += parseFloat(String(it.amt || 0).replace(/,/g,'')) || 0;
             });
             
-            const gst = taxable * 0.18;
-            const total = taxable + gst;
+            const item = {
+                date: d.invoice?.date || '',
+                dateObj: parseDate(d.invoice?.date),
+                no: d.invoice?.no || '',
+                party: d.billTo?.name || '',
+                taxable: taxable,
+                gst: taxable * 0.18,
+                total: taxable * 1.18,
+                details: d.billTo || {}
+            };
             
-            grandTaxable += taxable;
-            grandGst += gst;
-            grandTotal += total;
-            
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${d.invoice?.date || '-'}</td>
-                <td>${d.invoice?.no || '-'}</td>
-                <td>${d.billTo?.name || '-'}</td>
-                <td class="amt">${fmt(taxable)}</td>
-                <td class="amt">${fmt(gst)}</td>
-                <td class="amt">${fmt(total)}</td>
-            `;
-            invTable.appendChild(tr);
+            reportData.push(item);
+            if(item.party) partyNames.add(item.party);
         }
         
-        // Update Grand Totals
-        document.getElementById('tot-taxable').textContent = fmt(grandTaxable);
-        document.getElementById('tot-gst').textContent = fmt(grandGst);
-        document.getElementById('tot-grand').textContent = fmt(grandTotal);
-        
-        // Fill Party List
-        const pTable = document.getElementById('party-list');
-        pTable.innerHTML = '';
-        [...partyData.values()].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td><b>${p.name}</b></td>
-                <td>${p.gstin || '-'}<br><small>${p.pan || '-'}</small></td>
-                <td>${p.mobile || '-'}</td>
-                <td>${p.address || '-'}</td>
-            `;
-            pTable.appendChild(tr);
+        // Fill Company Dropdown
+        const compSelect = document.getElementById('filter-company');
+        [...partyNames].sort().forEach(name => {
+            const opt = document.createElement('option');
+            opt.value = name;
+            opt.textContent = name;
+            compSelect.appendChild(opt);
         });
         
-        status.textContent = 'Report Ready';
+        status.textContent = 'Data Ready';
+        applyFilters();
     } catch(e) {
         console.error(e);
         status.textContent = 'Error loading data';
     }
+}
+
+function applyFilters() {
+    const compFilter = document.getElementById('filter-company').value;
+    const monthFilter = document.getElementById('filter-month').value;
+    const sortOrder = document.getElementById('sort-order').value;
+    
+    let filtered = reportData.filter(item => {
+        const matchComp = !compFilter || item.party === compFilter;
+        const matchMonth = !monthFilter || (item.date && item.date.split('/')[1] === monthFilter);
+        return matchComp && matchMonth;
+    });
+    
+    // Sort
+    filtered.sort((a, b) => {
+        if(sortOrder === 'date-new') return b.dateObj - a.dateObj;
+        if(sortOrder === 'date-old') return a.dateObj - b.dateObj;
+        if(sortOrder === 'amt-high') return b.total - a.total;
+        if(sortOrder === 'amt-low') return a.total - b.total;
+        return 0;
+    });
+    
+    renderTables(filtered);
+}
+
+function renderTables(data) {
+    const pTable = document.getElementById('party-list');
+    const invTable = document.getElementById('invoice-list');
+    pTable.innerHTML = '';
+    invTable.innerHTML = '';
+    
+    let gTaxable = 0, gGst = 0, gTotal = 0;
+    const uniqueParties = new Map();
+    
+    data.forEach(d => {
+        // Invoice Row
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td>${d.date}</td>
+            <td>${d.no}</td>
+            <td>${d.party}</td>
+            <td class="amt">${fmt(d.taxable)}</td>
+            <td class="amt">${fmt(d.gst)}</td>
+            <td class="amt">${fmt(d.total)}</td>
+        `;
+        invTable.appendChild(tr);
+        
+        gTaxable += d.taxable;
+        gGst += d.gst;
+        gTotal += d.total;
+        
+        // Collect Party info for the unique list
+        if(d.party && !uniqueParties.has(d.party)) {
+            uniqueParties.set(d.party, d.details);
+        }
+    });
+    
+    // Party Rows
+    [...uniqueParties.values()].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><b>${p.name}</b></td>
+            <td>${p.gstin || '-'}<br><small>${p.pan || '-'}</small></td>
+            <td>${p.mobile || '-'}</td>
+            <td>${p.address || '-'}</td>
+        `;
+        pTable.appendChild(tr);
+    });
+    
+    document.getElementById('tot-taxable').textContent = fmt(gTaxable);
+    document.getElementById('tot-gst').textContent = fmt(gGst);
+    document.getElementById('tot-grand').textContent = fmt(gTotal);
 }
 
 applyLoginState();
