@@ -8,7 +8,7 @@
 /* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;background:#e8e8e8;}
-.logged-out .toolbar,.logged-out .page-wrap{display:none;}
+.logged-out .toolbar,.logged-out .page-wrap,.logged-out .payment-panel{display:none;}
 .login-screen{width:100vw;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#e8e8e8;padding:20px;overflow:hidden;}
 .login-box{width:min(320px,calc(100vw - 32px));background:#fff;border:1px solid #bbb;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,0.12);}
 .login-box h1{font-size:18px;letter-spacing:1px;margin-bottom:12px;color:#222;}
@@ -38,6 +38,20 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;backgroun
 .toolbar .sep{width:1px;height:24px;background:#555;margin:0 4px;}
 .toolbar .tb-title{font-size:13px;font-weight:bold;color:#fff;margin-right:8px;}
 .db-status{font-size:11px;color:#ddd;min-width:120px;}
+.payment-panel{width:210mm;margin:0 auto 24px;background:#fff;border:1px solid #bbb;padding:12px;}
+.payment-panel h2{font-size:15px;margin-bottom:10px;letter-spacing:0.5px;}
+.payment-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;}
+.payment-field label{display:block;font-size:10px;font-weight:bold;color:#444;margin-bottom:4px;}
+.payment-field input{width:100%;border:1px solid #aaa;padding:7px;font-size:13px;}
+.payment-value{border:1px solid #ddd;background:#f6f6f6;padding:8px;font-size:13px;font-weight:bold;min-height:32px;}
+.payment-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
+.payment-actions button{border:none;padding:8px 14px;border-radius:4px;font-size:12px;font-weight:bold;cursor:pointer;}
+.pay-primary{background:#009688;color:#fff;}
+.pay-secondary{background:#673AB7;color:#fff;}
+.pay-clear{background:#f44336;color:#fff;}
+.pay-status{font-size:13px;font-weight:bold;margin-top:8px;}
+.pay-status.paid{color:#1b5e20;}
+.pay-status.due{color:#b71c1c;}
 
 /* ── INVOICE WRAPPER ── */
 .page-wrap{padding:20px;display:flex;justify-content:center;}
@@ -254,6 +268,14 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   .rcvd-input{width:90px;max-width:90px;text-align:right;}
   .sg{min-height:110px;}
   .sg-dl{margin-top:46px;}
+  .payment-panel{width:auto;margin:0 10px 20px;border-radius:8px;padding:12px;}
+  .payment-panel h2{font-size:15px;}
+  .payment-grid{display:block;}
+  .payment-field{margin-bottom:10px;}
+  .payment-field label{font-size:11px;}
+  .payment-field input,.payment-value{font-size:15px;border-radius:6px;padding:10px;}
+  .payment-actions{display:grid;grid-template-columns:1fr;gap:8px;}
+  .payment-actions button{min-height:40px;border-radius:6px;}
 }
 
 /* ═══════════════════════════════════════
@@ -265,6 +287,7 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   body{background:#fff;}
   .toolbar{display:none!important;}
   .login-screen{display:none!important;}
+  .no-print{display:none!important;}
   .page-wrap{display:flex!important;padding:0;}
   .inv{border:none;width:100%;}
   .del-cell{display:none!important;}
@@ -310,6 +333,7 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   <button class="btn-save" onclick="saveInvoice()">Save</button>
   <button class="btn-load" onclick="loadInvoice()">Load</button>
   <button class="btn-load" onclick="listInvoices()">Recent</button>
+  <button class="btn-save" onclick="showPaymentPanel()">Payment</button>
   <button class="btn-clear" onclick="logout()">Logout</button>
   <span class="db-status" id="db-status"></span>
   <div class="sep"></div>
@@ -526,6 +550,35 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
 </div><!-- end .inv -->
 </div><!-- end .page-wrap -->
 
+<div class="payment-panel no-print" id="payment-panel">
+  <h2>PAYMENT ENTRY</h2>
+  <div class="payment-grid">
+    <div class="payment-field">
+      <label>Invoice No.</label>
+      <input id="pay-inv-no" type="text" placeholder="INV/2627/001">
+    </div>
+    <div class="payment-field">
+      <label>Total Amount</label>
+      <div class="payment-value" id="pay-total">₹ 0.00</div>
+    </div>
+    <div class="payment-field">
+      <label>Received Amount</label>
+      <input id="pay-received" type="number" min="0" step="0.01" value="0" oninput="updatePaymentPreview()">
+    </div>
+    <div class="payment-field">
+      <label>Balance</label>
+      <div class="payment-value" id="pay-balance">₹ 0.00</div>
+    </div>
+  </div>
+  <div class="payment-actions">
+    <button class="pay-primary" onclick="loadPaymentInvoice()">Load Invoice</button>
+    <button class="pay-secondary" onclick="markPaymentDone()">Mark Fully Paid</button>
+    <button class="pay-primary" onclick="savePaymentEntry()">Save Payment</button>
+    <button class="pay-clear" onclick="clearPaymentEntry()">Clear</button>
+  </div>
+  <div class="pay-status due" id="pay-status">Balance Due</div>
+</div>
+
 <script>
 // ─── CONFIG ───
 const DEFAULT_ROWS = 12;
@@ -592,6 +645,10 @@ async function api(action, payload={}){
 // ─── FORMAT NUMBER ───
 function fmt(n){
   return n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+
+function parseMoney(value){
+  return parseFloat(String(value||'').replace(/[^0-9.-]/g,'')) || 0;
 }
 
 // ─── AMOUNT IN WORDS (Indian System) ───
@@ -765,6 +822,13 @@ function collectInvoice(){
     hsn: {
       code: field('hsn-code')
     },
+    payment: {
+      totalAmount: parseMoney(document.getElementById('sum-total').textContent),
+      receivedAmount: parseMoney(document.getElementById('rcvd-amt').value),
+      balanceAmount: parseMoney(document.getElementById('sum-balance').textContent),
+      status: parseMoney(document.getElementById('sum-balance').textContent) <= 0 ? 'PAID' : 'BALANCE_DUE',
+      updatedAt: new Date().toISOString()
+    },
     items: Array.from(document.querySelectorAll('#items-body tr')).map(tr => ({
       date: rowValue(tr, 'date'),
       desc: rowValue(tr, 'desc'),
@@ -930,6 +994,65 @@ async function listInvoices(){
   }
 }
 
+function showPaymentPanel(){
+  document.getElementById('pay-inv-no').value = field('inv-no');
+  document.getElementById('pay-received').value = parseMoney(document.getElementById('rcvd-amt').value).toFixed(2);
+  updatePaymentPreview();
+  document.getElementById('payment-panel').scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function updatePaymentPreview(){
+  const total = parseMoney(document.getElementById('sum-total').textContent);
+  const received = parseMoney(document.getElementById('pay-received').value);
+  const balance = Math.max(total - received, 0);
+  const status = document.getElementById('pay-status');
+  document.getElementById('pay-total').textContent = '₹ '+fmt(total);
+  document.getElementById('pay-balance').textContent = '₹ '+fmt(balance);
+  status.textContent = balance <= 0 && total > 0 ? 'Payment Done' : 'Balance Due';
+  status.className = 'pay-status '+(balance <= 0 && total > 0 ? 'paid' : 'due');
+}
+
+async function loadPaymentInvoice(){
+  const invoiceNo = document.getElementById('pay-inv-no').value.trim();
+  if(!invoiceNo){
+    alert('Enter invoice number in Payment Entry.');
+    return;
+  }
+  document.getElementById('inv-no').value = invoiceNo;
+  await loadInvoice();
+  document.getElementById('pay-received').value = parseMoney(document.getElementById('rcvd-amt').value).toFixed(2);
+  updatePaymentPreview();
+}
+
+function markPaymentDone(){
+  const total = parseMoney(document.getElementById('sum-total').textContent);
+  document.getElementById('pay-received').value = total.toFixed(2);
+  updatePaymentPreview();
+}
+
+async function savePaymentEntry(){
+  const invoiceNo = document.getElementById('pay-inv-no').value.trim() || field('inv-no');
+  if(!invoiceNo){
+    alert('Enter invoice number before saving payment.');
+    return;
+  }
+  document.getElementById('inv-no').value = invoiceNo;
+  document.getElementById('rcvd-amt').value = parseMoney(document.getElementById('pay-received').value).toFixed(2);
+  updateTotals();
+  updatePaymentPreview();
+  await saveInvoice();
+}
+
+function clearPaymentEntry(){
+  document.getElementById('pay-inv-no').value = '';
+  document.getElementById('pay-received').value = '0';
+  document.getElementById('pay-total').textContent = '₹ 0.00';
+  document.getElementById('pay-balance').textContent = '₹ 0.00';
+  const status = document.getElementById('pay-status');
+  status.textContent = 'Balance Due';
+  status.className = 'pay-status due';
+}
+
 // ─── UPDATE ALL TOTALS ───
 function updateTotals(){
   let totalQty=0, totalAmt=0, hasQty=false;
@@ -978,6 +1101,9 @@ function updateTotals(){
 
   // Amount in words
   document.getElementById('amount-words').textContent=toWords(Math.round(total));
+  if(document.getElementById('pay-inv-no').value.trim() === document.getElementById('inv-no').value.trim()){
+    updatePaymentPreview();
+  }
 }
 
 // ─── UPDATE BALANCE ───
