@@ -73,6 +73,10 @@ tr:nth-child(even){background:#fafafa;}
         </select>
     </div>
     <div>
+        <label>Invoice No:</label>
+        <input type="text" id="filter-inv" placeholder="Search No..." oninput="applyFilters()" style="width:100px;">
+    </div>
+    <div>
         <label>Month:</label>
         <select id="filter-month" onchange="applyFilters()">
             <option value="">All Months</option>
@@ -271,13 +275,15 @@ async function loadAllData(){
 
 function applyFilters() {
     const compFilter = document.getElementById('filter-company').value;
+    const invFilter = document.getElementById('filter-inv').value.toLowerCase();
     const monthFilter = document.getElementById('filter-month').value;
     const sortOrder = document.getElementById('sort-order').value;
     
     let filtered = reportData.filter(item => {
         const matchComp = !compFilter || item.party === compFilter;
+        const matchInv = !invFilter || item.no.toLowerCase().includes(invFilter);
         const matchMonth = !monthFilter || (item.date && item.date.split('/')[1] === monthFilter);
-        return matchComp && matchMonth;
+        return matchComp && matchInv && matchMonth;
     });
     
     // Sort
