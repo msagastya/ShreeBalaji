@@ -97,6 +97,8 @@ tr:nth-child(even){background:#fafafa;}
     <div>
         <label>Sort By:</label>
         <select id="sort-order" onchange="applyFilters()">
+            <option value="inv-low">Invoice No (Small to Large)</option>
+            <option value="inv-high">Invoice No (Large to Small)</option>
             <option value="date-new">Date (New to Old)</option>
             <option value="date-old">Date (Old to New)</option>
             <option value="name-az">Party Name (A to Z)</option>
@@ -288,6 +290,8 @@ function applyFilters() {
     
     // Sort
     filtered.sort((a, b) => {
+        if(sortOrder === 'inv-low') return a.no.localeCompare(b.no, undefined, {numeric: true, sensitivity: 'base'});
+        if(sortOrder === 'inv-high') return b.no.localeCompare(a.no, undefined, {numeric: true, sensitivity: 'base'});
         if(sortOrder === 'date-new') return b.dateObj - a.dateObj;
         if(sortOrder === 'date-old') return a.dateObj - b.dateObj;
         if(sortOrder === 'name-az') return a.party.localeCompare(b.party);
