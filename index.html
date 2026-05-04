@@ -454,8 +454,8 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
     <tfoot>
       <tr class="sub">
         <td class="del-cell no-print" style="border:none;background:#e8e8e8;"></td>
-        <td colspan="6" class="c" id="subtotal-label">SUBTOTAL</td>
-        <td class="r" id="total-qty-cell" style="padding-right:8px; font-weight:bold; white-space:nowrap;">—</td>
+        <td colspan="5" class="c" id="subtotal-label">SUBTOTAL</td>
+        <td class="r" id="total-qty-cell" style="padding-right:12px; font-weight:bold; white-space:nowrap;">—</td>
         <td class="c">—</td>
         <td class="r" id="total-taxable-cell">₹ 0.00</td>
       </tr>
@@ -782,6 +782,12 @@ function calcRow(input){
 // ─── TOGGLE PARTY COLUMN ───
 function togglePartyCol(){
   document.body.classList.toggle('show-party-col');
+  updateSubtotalColspan();
+}
+
+function updateSubtotalColspan(){
+  const isShow = document.body.classList.contains('show-party-col');
+  document.getElementById('subtotal-label').colSpan = isShow ? 6 : 5;
 }
 
 // ─── EXPORT ZIP RANGE ───
@@ -983,6 +989,7 @@ function applyInvoice(data){
   } else {
     document.body.classList.remove('show-party-col');
   }
+  updateSubtotalColspan();
 
   rows.forEach(item => body.appendChild(createRow(item)));
   for(let i=rows.length;i<DEFAULT_ROWS;i++) body.appendChild(createRow());
@@ -1251,6 +1258,7 @@ function resetForm(){
     String(today.getMonth()+1).padStart(2,'0')+'/'+
     today.getFullYear();
   document.body.classList.remove('show-party-col');
+  updateSubtotalColspan();
   clearItems();
 }
 
