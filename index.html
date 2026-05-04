@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Shree Balaji Tempo Services — GST Invoice Template</title>
+<!-- PDF & ZIP Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
 /* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -344,6 +347,7 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   <button class="btn-load" onclick="loadInvoice()">Load</button>
   <button class="btn-load" onclick="listInvoices()">Recent</button>
   <button class="btn-save" onclick="showPaymentPanel()">Payment</button>
+  <button class="btn-save" onclick="exportZipRange()">📦 Export ZIP</button>
   <button class="btn-clear" onclick="logout()">Logout</button>
   <span class="db-status" id="db-status"></span>
   <div class="sep"></div>
@@ -771,6 +775,77 @@ function calcRow(input){
 // ─── TOGGLE PARTY COLUMN ───
 function togglePartyCol(){
   document.body.classList.toggle('show-party-col');
+}
+
+// ─── EXPORT ZIP RANGE ───
+async function exportZipRange() {
+  const range = prompt("Enter invoice range (e.g. 1-10):", "1-15");
+  if (!range) return;
+
+  const [start, end] = range.split('-').map(n => parseInt(n.trim()));
+  if (isNaN(start) || isNaN(end) || start > end) {
+    alert("Invalid range format. Use e.g. 1-10");
+    return;
+  }
+
+  const zip = new JSZip();
+  const folder = zip.folder("Invoices");
+  setDbStatus(`Preparing ZIP (${range})...`);
+
+  // We need a hidden container to render the invoices for PDF capture
+  const worker = document.createElement('div');
+  worker.style.position = 'absolute';
+  worker.style.left = '-9999px';
+  worker.style.top = '0';
+  worker.style.width = '210mm'; // Match A4 width
+  document.body.appendChild(worker);
+
+  try {
+    for (let i = start; i <= end; i++) {
+      const invNo = 'INV/2627/' + String(i).padStart(3, '0');
+      setDbStatus(`Capturing ${invNo}...`);
+
+      const result = await api('loadInvoice', { invoiceNo: invNo });
+      if (!result.data) {
+        console.warn(`Skipping ${invNo}: Not found`);
+        continue;
+      }
+
+      // 1. Temporarily apply data to the page to render it
+      applyInvoice(result.data);
+      
+      // 2. Clone the invoice element
+      const element = document.querySelector('.inv').cloneNode(true);
+      worker.innerHTML = '';
+      worker.appendChild(element);
+
+      // 3. Generate PDF Blob
+      const opt = {
+        margin: 10,
+        filename: `SHREE BALAJI - INV2627${String(i).padStart(3, '0')}.pdf`,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      };
+
+      const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
+      folder.file(opt.filename, pdfBlob);
+    }
+
+    setDbStatus("Zipping...");
+    const content = await zip.generateAsync({ type: "blob" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(content);
+    link.download = `Invoices_${range}.zip`;
+    link.click();
+    setDbStatus("Export Complete");
+  } catch (error) {
+    console.error(error);
+    setDbStatus("Export failed");
+    alert("Export failed: " + error.message);
+  } finally {
+    document.body.removeChild(worker);
+  }
 }
 
 // ─── DELETE ROW ───
