@@ -27,6 +27,14 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;backgroun
   .show-party-col table.it td.col-party::before{content:'Party';}
 }
 
+/* ── EXPORT MODE (mirror print styles for ZIP) ── */
+.export-mode .del-cell, .export-mode .del-btn, .export-mode .no-print { display: none !important; }
+.export-mode .it-input, .export-mode .hsn-input, .export-mode .rcvd-input { border: none !important; background: transparent !important; }
+.export-mode .ibar input { border-bottom: none !important; background: transparent !important; }
+.export-mode .editable:focus, .export-mode .it-input:focus { background: transparent !important; }
+.export-mode [contenteditable="true"]:empty:before { content: "" !important; }
+.export-mode .inv { border: none !important; width: 100% !important; margin: 0 !important; }
+
 /* ── TOOLBAR (hidden on print) ── */
 .toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
 .toolbar label{font-size:11px;color:#ccc;}
@@ -794,10 +802,11 @@ async function exportZipRange() {
 
   // We need a hidden container to render the invoices for PDF capture
   const worker = document.createElement('div');
+  worker.className = 'export-mode'; // Apply print-like styles
   worker.style.position = 'absolute';
   worker.style.left = '-9999px';
   worker.style.top = '0';
-  worker.style.width = '210mm'; // Match A4 width
+  worker.style.width = '210mm'; 
   document.body.appendChild(worker);
 
   try {
@@ -819,15 +828,19 @@ async function exportZipRange() {
       worker.innerHTML = '';
       worker.appendChild(element);
 
+      // Give it a tiny moment to ensure values are updated in the DOM
+      await new Promise(r => setTimeout(r, 100));
+
       // 3. Generate PDF Blob
       const opt = {
-        margin: 5,
+        margin: [8, 8, 8, 8],
         filename: `SHREE BALAJI - INV2627${String(i).padStart(3, '0')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
         html2canvas: { 
           scale: 2, 
           useCORS: true,
-          windowWidth: 800 // Force desktop-like width for capture
+          windowWidth: 800,
+          logging: false
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
