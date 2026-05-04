@@ -28,12 +28,13 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;backgroun
 }
 
 /* ── EXPORT MODE (mirror print styles for ZIP) ── */
-.export-mode .del-cell, .export-mode .del-btn, .export-mode .no-print { display: none !important; }
-.export-mode .it-input, .export-mode .hsn-input, .export-mode .rcvd-input { border: none !important; background: transparent !important; }
+.export-mode .del-cell, .export-mode .del-btn, .export-mode .no-print, .export-mode .del-cell.no-print { display: none !important; }
+.export-mode .it-input, .export-mode .hsn-input, .export-mode .rcvd-input { border: none !important; background: transparent !important; color: #222 !important; }
 .export-mode .ibar input { border-bottom: none !important; background: transparent !important; }
 .export-mode .editable:focus, .export-mode .it-input:focus { background: transparent !important; }
 .export-mode [contenteditable="true"]:empty:before { content: "" !important; }
-.export-mode .inv { border: none !important; width: 100% !important; margin: 0 !important; }
+.export-mode.inv, .export-mode .inv { border: none !important; width: 100% !important; margin: 0 !important; background: #fff !important; }
+.export-mode table.it tr:nth-child(even) td { background: #fff !important; } /* Force clean white background */
 
 /* ── TOOLBAR (hidden on print) ── */
 .toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
@@ -828,8 +829,10 @@ async function exportZipRange() {
       applyInvoice(result.data);
       
       const element = document.querySelector('.inv').cloneNode(true);
+      element.classList.add('export-mode'); 
+      if(document.body.classList.contains('show-party-col')) element.classList.add('show-party-col');
+      
       worker.innerHTML = '';
-      worker.className = 'export-mode' + (document.body.classList.contains('show-party-col') ? ' show-party-col' : '');
       worker.appendChild(element);
 
       await new Promise(r => setTimeout(r, 100));
