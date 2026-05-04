@@ -454,8 +454,8 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
     <tfoot>
       <tr class="sub">
         <td class="del-cell no-print" style="border:none;background:#e8e8e8;"></td>
-        <td colspan="5" class="c" id="subtotal-label">SUBTOTAL</td>
-        <td class="c" id="total-qty-cell">—</td>
+        <td colspan="6" class="c" id="subtotal-label">SUBTOTAL</td>
+        <td class="r" id="total-qty-cell" style="padding-right:8px; font-weight:bold; white-space:nowrap;">—</td>
         <td class="c">—</td>
         <td class="r" id="total-taxable-cell">₹ 0.00</td>
       </tr>
@@ -782,8 +782,6 @@ function calcRow(input){
 // ─── TOGGLE PARTY COLUMN ───
 function togglePartyCol(){
   document.body.classList.toggle('show-party-col');
-  const isShow = document.body.classList.contains('show-party-col');
-  document.getElementById('subtotal-label').colSpan = isShow ? 6 : 5;
 }
 
 // ─── EXPORT ZIP RANGE ───
@@ -825,6 +823,7 @@ async function exportZipRange() {
       
       const element = document.querySelector('.inv').cloneNode(true);
       worker.innerHTML = '';
+      worker.className = 'export-mode' + (document.body.classList.contains('show-party-col') ? ' show-party-col' : '');
       worker.appendChild(element);
 
       await new Promise(r => setTimeout(r, 100));
@@ -981,10 +980,8 @@ function applyInvoice(data){
   // Auto-show party column if any item has a party name
   if(rows.some(r => r.party)){
     document.body.classList.add('show-party-col');
-    document.getElementById('subtotal-label').colSpan = 6;
   } else {
     document.body.classList.remove('show-party-col');
-    document.getElementById('subtotal-label').colSpan = 5;
   }
 
   rows.forEach(item => body.appendChild(createRow(item)));
@@ -1185,8 +1182,8 @@ function updateTotals(){
     if(qtyInput){
       const q=parseFloat((qtyInput.value||'').replace(/,/g,''))||0;
       if(q>0){totalQty+=q;hasQty=true;}
-      const unitI = tr.querySelectorAll('input.it-input.ctr');
-      if(unitI.length>=2) unit=unitI[1].value||'KGS';
+      const uInput = tr.querySelector('input[data-role="unit"]');
+      if(uInput && uInput.value) unit = uInput.value;
     }
     const amtCell=tr.querySelector('.amt-cell');
     if(amtCell) totalAmt+=parseFloat(amtCell.dataset.amt||0)||0;
@@ -1254,7 +1251,6 @@ function resetForm(){
     String(today.getMonth()+1).padStart(2,'0')+'/'+
     today.getFullYear();
   document.body.classList.remove('show-party-col');
-  document.getElementById('subtotal-label').colSpan = 5;
   clearItems();
 }
 
