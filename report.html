@@ -206,7 +206,7 @@ async function api(action, payload={}){
 }
 
 function fmt(n){
-    return (n || 0).toLocaleString('en-IN', {minimumFractionDigits:2, maximumFractionDigits:2});
+    return Math.round(n || 0).toLocaleString('en-IN', {minimumFractionDigits:0, maximumFractionDigits:0});
 }
 
 // Convert DD/MM/YYYY to Date object for sorting

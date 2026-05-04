@@ -665,7 +665,7 @@ async function api(action, payload={}){
 
 // ─── FORMAT NUMBER ───
 function fmt(n){
-  return n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2});
+  return Math.round(n || 0).toLocaleString('en-IN',{minimumFractionDigits:0,maximumFractionDigits:0});
 }
 
 function parseMoney(value){
@@ -742,22 +742,22 @@ function calcRow(input){
   if(input.dataset.role==='amt'){
     if(qty>0) {
       rate = amt / qty;
-      rateInput.value = rate>0 ? rate.toFixed(2) : '';
+      rateInput.value = rate>0 ? rate.toFixed(4) : '';
     } else if(rate>0) {
       qty = amt / rate;
       qtyInput.value = qty>0 ? Math.round(qty).toString() : '';
     }
   } else if(input.dataset.role==='qty'){
     if(rate>0) {
-      amt = qty * rate;
+      amt = Math.round(qty * rate);
       amtInput.value = amt>0 ? fmt(amt) : '';
     } else if(amt>0 && qty>0) {
       rate = amt / qty;
-      rateInput.value = rate>0 ? rate.toFixed(2) : '';
+      rateInput.value = rate>0 ? rate.toFixed(4) : '';
     }
   } else if(input.dataset.role==='rate'){
     if(qty>0) {
-      amt = qty * rate;
+      amt = Math.round(qty * rate);
       amtInput.value = amt>0 ? fmt(amt) : '';
     } else if(amt>0 && rate>0) {
       qty = amt / rate;
@@ -767,7 +767,7 @@ function calcRow(input){
 
   const amtCell = tr.querySelector('.amt-cell');
   const prefix = tr.querySelector('.amt-prefix');
-  amtCell.dataset.amt = amt>0 ? amt.toFixed(2) : '';
+  amtCell.dataset.amt = amt>0 ? Math.round(amt).toString() : '';
   prefix.textContent = amt>0 ? '₹' : '';
   updateTotals();
 }
@@ -1178,8 +1178,8 @@ function updateTotals(){
 
   const gstRate = parseFloat(document.getElementById('gst-rate').value)||18;
   const halfRate = gstRate/2;
-  const cgst = totalAmt * halfRate/100;
-  const sgst = totalAmt * halfRate/100;
+  const cgst = Math.round(totalAmt * halfRate/100);
+  const sgst = Math.round(totalAmt * halfRate/100);
   const total = totalAmt + cgst + sgst;
   const rcvd  = parseFloat(document.getElementById('rcvd-amt').value)||0;
   const bal   = total - rcvd;
