@@ -821,10 +821,14 @@ async function exportZipRange() {
 
       // 3. Generate PDF Blob
       const opt = {
-        margin: 10,
+        margin: 5,
         filename: `SHREE BALAJI - INV2627${String(i).padStart(3, '0')}.pdf`,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true,
+          windowWidth: 800 // Force desktop-like width for capture
+        },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
