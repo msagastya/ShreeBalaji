@@ -18,6 +18,12 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:9.5px;color:#222;backgroun
 .login-error{font-size:11px;color:#c62828;min-height:14px;margin-top:8px;}
 .logged-in .login-screen{display:none;}
 
+.col-party{display:none;}
+.show-party-col .col-party{display:table-cell;}
+@media screen and (max-width: 720px) {
+  .show-party-col table.it td.col-party::before{content:'Party';}
+}
+
 /* ── TOOLBAR (hidden on print) ── */
 .toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
 .toolbar label{font-size:11px;color:#ccc;}
@@ -331,6 +337,7 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   <button class="btn-add" onclick="copyBillToShip()">Bill = Ship</button>
   <button class="btn-load" onclick="savePartyMaster()">Save Party</button>
   <button class="btn-load" onclick="loadPartyMaster()">Load Party</button>
+  <button class="btn-load" onclick="togglePartyCol()">Toggle Party</button>
   <button class="btn-reset" onclick="resetForm()">↺ New Invoice</button>
   <button class="btn-clear" onclick="clearItems()">✕ Clear Items</button>
   <button class="btn-save" onclick="saveInvoice()">Save</button>
@@ -420,6 +427,7 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
         <th class="del-cell no-print" style="width:18px;background:#444;"></th>
         <th style="width:4%">SR.<br>NO.</th>
         <th style="width:9%">DATE</th>
+        <th class="col-party" style="width:15%">PARTY</th>
         <th class="l" style="width:21%">DESCRIPTION OF GOODS / SERVICES</th>
         <th style="width:10%">LR NO.</th>
         <th style="width:10%">BILL NO.</th>
@@ -686,12 +694,13 @@ function createRow(data={}){
   const rate = data.rate||'';
   const amt  = data.amt || ((qty && rate) ? (parseFloat(qty)*parseFloat(rate)).toFixed(2) : '');
 
-  tr.innerHTML = `
+  tr.innerHTML = \`
     <td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Delete row">✕</button></td>
-    <td class="c" style="font-size:8px;color:#888;">${idx}</td>
-    <td class="c"><input class="it-input ctr" data-role="date" placeholder="Date" value="${data.date||''}"></td>
-    <td><input class="it-input" data-role="desc" placeholder="Description…" value="${data.desc||''}"></td>
-    <td class="c"><input class="it-input ctr" data-role="lr" placeholder="LR No." value="${data.lr||''}"></td>
+    <td class="c" style="font-size:8px;color:#888;">\${idx}</td>
+    <td class="c"><input class="it-input ctr" data-role="date" placeholder="Date" value="\${data.date||''}"></td>
+    <td class="col-party"><input class="it-input" data-role="party" placeholder="Party Name…" value="\${data.party||''}"></td>
+    <td><input class="it-input" data-role="desc" placeholder="Description…" value="\${data.desc||''}"></td>
+    <td class="c"><input class="it-input ctr" data-role="lr" placeholder="LR No." value="\${data.lr||''}"></td>
     <td class="c"><input class="it-input ctr" data-role="bill" placeholder="Bill No." value="${data.bill||''}"></td>
     <td class="c">
       <div class="rate-wrap">
@@ -751,6 +760,11 @@ function calcRow(input){
   amtCell.dataset.amt = amt>0 ? amt.toFixed(2) : '';
   prefix.textContent = amt>0 ? '₹' : '';
   updateTotals();
+}
+
+// ─── TOGGLE PARTY COLUMN ───
+function togglePartyCol(){
+  document.body.classList.toggle('show-party-col');
 }
 
 // ─── DELETE ROW ───
@@ -834,6 +848,7 @@ function collectInvoice(){
     },
     items: Array.from(document.querySelectorAll('#items-body tr')).map(tr => ({
       date: rowValue(tr, 'date'),
+      party: rowValue(tr, 'party'),
       desc: rowValue(tr, 'desc'),
       lr: rowValue(tr, 'lr'),
       bill: rowValue(tr, 'bill'),
@@ -867,6 +882,14 @@ function applyInvoice(data){
   body.innerHTML = '';
   rowCount = 0;
   const rows = Array.isArray(data.items) && data.items.length ? data.items : [];
+  
+  // Auto-show party column if any item has a party name
+  if(rows.some(r => r.party)){
+    document.body.classList.add('show-party-col');
+  } else {
+    document.body.classList.remove('show-party-col');
+  }
+
   rows.forEach(item => body.appendChild(createRow(item)));
   for(let i=rows.length;i<DEFAULT_ROWS;i++) body.appendChild(createRow());
   updateTotals();
