@@ -454,9 +454,8 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
     <tfoot>
       <tr class="sub">
         <td class="del-cell no-print" style="border:none;background:#e8e8e8;"></td>
-        <td colspan="4" class="c">SUBTOTAL</td>
+        <td colspan="5" class="c" id="subtotal-label">SUBTOTAL</td>
         <td class="c" id="total-qty-cell">—</td>
-        <td class="c" id="total-unit-cell"></td>
         <td class="c">—</td>
         <td class="r" id="total-taxable-cell">₹ 0.00</td>
       </tr>
@@ -783,6 +782,8 @@ function calcRow(input){
 // ─── TOGGLE PARTY COLUMN ───
 function togglePartyCol(){
   document.body.classList.toggle('show-party-col');
+  const isShow = document.body.classList.contains('show-party-col');
+  document.getElementById('subtotal-label').colSpan = isShow ? 6 : 5;
 }
 
 // ─── EXPORT ZIP RANGE ───
@@ -980,8 +981,10 @@ function applyInvoice(data){
   // Auto-show party column if any item has a party name
   if(rows.some(r => r.party)){
     document.body.classList.add('show-party-col');
+    document.getElementById('subtotal-label').colSpan = 6;
   } else {
     document.body.classList.remove('show-party-col');
+    document.getElementById('subtotal-label').colSpan = 5;
   }
 
   rows.forEach(item => body.appendChild(createRow(item)));
@@ -1198,8 +1201,7 @@ function updateTotals(){
   const bal   = total - rcvd;
 
   // Subtotal row
-  document.getElementById('total-qty-cell').textContent = hasQty ? totalQty.toLocaleString('en-IN') : '—';
-  document.getElementById('total-unit-cell').textContent = hasQty ? unit : '';
+  document.getElementById('total-qty-cell').textContent = hasQty ? (totalQty.toLocaleString('en-IN') + ' ' + unit) : '—';
   document.getElementById('total-taxable-cell').textContent = '₹ '+fmt(totalAmt);
 
   // HSN row
@@ -1251,6 +1253,8 @@ function resetForm(){
     String(today.getDate()).padStart(2,'0')+'/'+
     String(today.getMonth()+1).padStart(2,'0')+'/'+
     today.getFullYear();
+  document.body.classList.remove('show-party-col');
+  document.getElementById('subtotal-label').colSpan = 5;
   clearItems();
 }
 
