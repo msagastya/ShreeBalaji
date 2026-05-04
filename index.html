@@ -852,7 +852,6 @@ async function exportZipRange() {
 
       document.body.classList.remove('export-mode');
     }
-    }
 
     setDbStatus("Zipping...");
     const content = await zip.generateAsync({ type: "blob" });
