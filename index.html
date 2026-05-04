@@ -618,7 +618,13 @@ function getAuth(){
 function applyLoginState(){
   const auth = getAuth();
   const ok = auth.username === LOGIN_USER && auth.password === LOGIN_PASS;
-  document.body.className = ok ? 'logged-in' : 'logged-out';
+  if(ok){
+    document.body.classList.add('logged-in');
+    document.body.classList.remove('logged-out');
+  } else {
+    document.body.classList.add('logged-out');
+    document.body.classList.remove('logged-in');
+  }
 }
 
 function login(event){
@@ -694,13 +700,13 @@ function createRow(data={}){
   const rate = data.rate||'';
   const amt  = data.amt || ((qty && rate) ? (parseFloat(qty)*parseFloat(rate)).toFixed(2) : '');
 
-  tr.innerHTML = \`
+  tr.innerHTML = `
     <td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Delete row">✕</button></td>
-    <td class="c" style="font-size:8px;color:#888;">\${idx}</td>
-    <td class="c"><input class="it-input ctr" data-role="date" placeholder="Date" value="\${data.date||''}"></td>
-    <td class="col-party"><input class="it-input" data-role="party" placeholder="Party Name…" value="\${data.party||''}"></td>
-    <td><input class="it-input" data-role="desc" placeholder="Description…" value="\${data.desc||''}"></td>
-    <td class="c"><input class="it-input ctr" data-role="lr" placeholder="LR No." value="\${data.lr||''}"></td>
+    <td class="c" style="font-size:8px;color:#888;">${idx}</td>
+    <td class="c"><input class="it-input ctr" data-role="date" placeholder="Date" value="${data.date||''}"></td>
+    <td class="col-party"><input class="it-input" data-role="party" placeholder="Party Name…" value="${data.party||''}"></td>
+    <td><input class="it-input" data-role="desc" placeholder="Description…" value="${data.desc||''}"></td>
+    <td class="c"><input class="it-input ctr" data-role="lr" placeholder="LR No." value="${data.lr||''}"></td>
     <td class="c"><input class="it-input ctr" data-role="bill" placeholder="Bill No." value="${data.bill||''}"></td>
     <td class="c">
       <div class="rate-wrap">
