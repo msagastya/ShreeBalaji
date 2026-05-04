@@ -828,23 +828,20 @@ async function exportZipRange() {
 
       applyInvoice(result.data);
       
-      const element = document.querySelector('.inv').cloneNode(true);
-      element.classList.add('export-mode'); 
-      if(document.body.classList.contains('show-party-col')) element.classList.add('show-party-col');
-      
-      worker.innerHTML = '';
-      worker.appendChild(element);
+      // 2. Apply export-mode to body to mirror individual print styles exactly
+      document.body.classList.add('export-mode');
+      const element = document.querySelector('.inv');
 
       await new Promise(r => setTimeout(r, 100));
 
       const opt = {
-        margin: [10, 10, 10, 10], // Professional margins
+        margin: [10, 10, 10, 10], 
         filename: `SHREE BALAJI - INV2627${String(i).padStart(3, '0')}.pdf`,
-        image: { type: 'jpeg', quality: 0.98 },
+        image: { type: 'jpeg', quality: 1 },
         html2canvas: { 
-          scale: 3, // Higher quality
+          scale: 4, // "Scale up" for ultra-sharp quality
           useCORS: true,
-          windowWidth: 720, // Match the printable area width in pixels
+          windowWidth: 800, 
           logging: false
         },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -852,6 +849,9 @@ async function exportZipRange() {
 
       const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
       folder.file(opt.filename, pdfBlob);
+
+      document.body.classList.remove('export-mode');
+    }
     }
 
     setDbStatus("Zipping...");
