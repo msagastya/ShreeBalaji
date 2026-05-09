@@ -10,15 +10,15 @@
 <style>
 /* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box;}
-body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#222;background:#e8e8e8;}
+body{font-family:Arial,Helvetica,sans-serif;font-size:16.5px;color:#222;background:#e8e8e8;}
 .logged-out .toolbar,.logged-out .page-wrap,.logged-out .payment-panel{display:none;}
 .login-screen{width:100vw;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#e8e8e8;padding:20px;overflow:hidden;}
 .login-box{width:min(320px,calc(100vw - 32px));background:#fff;border:1px solid #bbb;padding:18px;box-shadow:0 8px 24px rgba(0,0,0,0.12);}
-.login-box h1{font-size:18px;letter-spacing:1px;margin-bottom:12px;color:#222;}
-.login-box label{display:block;font-size:11px;font-weight:bold;margin:10px 0 4px;color:#333;}
-.login-box input{width:100%;border:1px solid #aaa;padding:8px;font-size:13px;}
+.login-box h1{font-size:22px;letter-spacing:1px;margin-bottom:12px;color:#222;}
+.login-box label{display:block;font-size:13.5px;font-weight:bold;margin:10px 0 4px;color:#333;}
+.login-box input{width:100%;border:1px solid #aaa;padding:8px;font-size:16px;}
 .login-box button{width:100%;margin-top:14px;padding:9px;border:none;background:#333;color:#fff;font-weight:bold;cursor:pointer;}
-.login-error{font-size:11px;color:#c62828;min-height:14px;margin-top:8px;}
+.login-error{font-size:13.5px;color:#c62828;min-height:14px;margin-top:8px;}
 .logged-in .login-screen{display:none;}
 
 .col-party{display:none;}
@@ -38,9 +38,9 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#222;background
 
 /* ── TOOLBAR (hidden on print) ── */
 .toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100;}
-.toolbar label{font-size:11px;color:#ccc;}
-.toolbar input[type=text],.toolbar input[type=date],.toolbar input[type=number]{background:#555;border:1px solid #666;color:#fff;padding:4px 8px;border-radius:3px;font-size:11px;width:auto;}
-.toolbar button{padding:6px 16px;border:none;border-radius:4px;font-size:11px;font-weight:bold;cursor:pointer;transition:background 0.2s;}
+.toolbar label{font-size:13.5px;color:#ccc;}
+.toolbar input[type=text],.toolbar input[type=date],.toolbar input[type=number]{background:#555;border:1px solid #666;color:#fff;padding:4px 8px;border-radius:3px;font-size:13.5px;width:auto;}
+.toolbar button{padding:6px 16px;border:none;border-radius:4px;font-size:13.5px;font-weight:bold;cursor:pointer;transition:background 0.2s;}
 .btn-print{background:#4CAF50;color:#fff;}
 .btn-print:hover{background:#388E3C;}
 .btn-add{background:#2196F3;color:#fff;}
@@ -54,82 +54,82 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#222;background
 .btn-load{background:#009688;color:#fff;}
 .btn-load:hover{background:#00695C;}
 .toolbar .sep{width:1px;height:24px;background:#555;margin:0 4px;}
-.toolbar .tb-title{font-size:13px;font-weight:bold;color:#fff;margin-right:8px;}
-.db-status{font-size:11px;color:#ddd;min-width:120px;}
+.toolbar .tb-title{font-size:16px;font-weight:bold;color:#fff;margin-right:8px;}
+.db-status{font-size:13.5px;color:#ddd;min-width:120px;}
 .payment-panel{width:210mm;margin:0 auto 24px;background:#fff;border:1px solid #bbb;padding:12px;}
-.payment-panel h2{font-size:17px;margin-bottom:10px;letter-spacing:0.5px;}
+.payment-panel h2{font-size:22px;margin-bottom:10px;letter-spacing:0.5px;}
 .payment-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;align-items:end;}
-.payment-field label{display:block;font-size:10px;font-weight:bold;color:#444;margin-bottom:4px;}
-.payment-field input{width:100%;border:1px solid #aaa;padding:7px;font-size:13px;}
-.payment-value{border:1px solid #ddd;background:#f6f6f6;padding:8px;font-size:13px;font-weight:bold;min-height:32px;}
+.payment-field label{display:block;font-size:11.5px;font-weight:bold;color:#444;margin-bottom:4px;}
+.payment-field input{width:100%;border:1px solid #aaa;padding:7px;font-size:15px;}
+.payment-value{border:1px solid #ddd;background:#f6f6f6;padding:8px;font-size:15px;font-weight:bold;min-height:32px;}
 .payment-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
-.payment-actions button{border:none;padding:8px 14px;border-radius:4px;font-size:12px;font-weight:bold;cursor:pointer;}
+.payment-actions button{border:none;padding:8px 14px;border-radius:4px;font-size:14px;font-weight:bold;cursor:pointer;}
 .pay-primary{background:#009688;color:#fff;}
 .pay-secondary{background:#673AB7;color:#fff;}
 .pay-clear{background:#f44336;color:#fff;}
-.pay-status{font-size:13px;font-weight:bold;margin-top:8px;}
+.pay-status{font-size:15px;font-weight:bold;margin-top:8px;}
 .pay-status.paid{color:#1b5e20;}
 .pay-status.due{color:#b71c1c;}
 
 /* ── INVOICE WRAPPER ── */
-.page-wrap{padding:20px;display:flex;justify-content:center;}
+.page-wrap{padding:10px;display:flex;justify-content:center;}
 .inv{width:210mm;background:#fff;border:1px solid #bbb;}
 
 /* ── OM STRIP ── */
-.om{text-align:center;padding:5px 0 4px;border-bottom:1.5px solid #444;font-size:15px;font-weight:bold;letter-spacing:3px;color:#222;}
+.om{text-align:center;padding:5px 0 4px;border-bottom:1.5px solid #444;font-size:18px;font-weight:bold;letter-spacing:3px;color:#222;}
 
 /* ── TOP BAR ── */
 .top-bar{display:table;width:100%;padding:5px 8px;border-bottom:2px solid #444;}
 .tb-l{display:table-cell;vertical-align:middle;}
 .tb-r{display:table-cell;vertical-align:middle;text-align:right;}
-.ti{font-size:15px;font-weight:bold;letter-spacing:4px;color:#222;}
-.ob{border:1.5px solid #444;padding:2px 9px;font-size:8px;font-weight:bold;letter-spacing:1.5px;margin-left:10px;color:#333;}
-.ct{font-size:8.5px;letter-spacing:0.5px;color:#444;}
+.ti{font-size:21px;font-weight:bold;letter-spacing:4px;color:#222;}
+.ob{border:1.5px solid #444;padding:2px 9px;font-size:10px;font-weight:bold;letter-spacing:1.5px;margin-left:10px;color:#333;}
+.ct{font-size:10.5px;letter-spacing:0.5px;color:#444;}
 
 /* ── COMPANY HEADER ── */
-.co-hdr{text-align:center;padding:8px 4px 6px;border-bottom:2.5px double #444;}
-.co-nm{font-size:23px;font-weight:bold;letter-spacing:2px;margin-bottom:3px;color:#222;}
-.co-ad{font-size:9.5px;color:#555;margin-bottom:2px;}
-.co-mt{font-size:10px;color:#333;}
+.co-hdr{text-align:center;padding:4px 4px 2px;border-bottom:2.5px double #444;}
+.co-nm{font-size:32px;font-weight:bold;letter-spacing:2px;margin-bottom:3px;color:#222;}
+.co-ad{font-size:11.5px;color:#555;margin-bottom:2px;}
+.co-mt{font-size:12px;color:#333;}
 .co-mt span{margin:0 7px;}
 
 /* ── INVOICE INFO BAR ── */
-.ibar{display:table;width:calc(100% - 12px);margin:5px 6px;background:#f2f2f2;border:1px solid #bbb;border-left:4px solid #444;padding:5px 9px;}
-.ibar-c{display:table-cell;font-size:11.5px;color:#222;vertical-align:middle;}
-.ibar input{border:none;background:transparent;font-size:11.5px;color:#222;font-family:Arial,sans-serif;font-weight:bold;width:130px;outline:none;border-bottom:1px dashed #aaa;}
+.ibar{display:table;width:calc(100% - 12px);margin:3px 6px;background:#f2f2f2;border:1px solid #bbb;border-left:4px solid #444;padding:2px 9px;}
+.ibar-c{display:table-cell;font-size:16px;color:#222;vertical-align:middle;}
+.ibar input{border:none;background:transparent;font-size:16px;color:#222;font-family:Arial,sans-serif;font-weight:bold;width:130px;outline:none;border-bottom:1px dashed #aaa;}
 .ibar input:focus{border-bottom:1px solid #333;background:#fff8dc;}
 
 /* ── ADDRESS SECTION ── */
-.adr-t{width:calc(100% - 12px);margin:5px 6px;border-collapse:collapse;}
+.adr-t{width:calc(100% - 12px);margin:3px 6px;border-collapse:collapse;}
 .adr-c{width:50%;vertical-align:top;padding:0 3px 0 0;}
 .adr-c2{width:50%;vertical-align:top;padding:0 0 0 3px;}
 .adr-box{border:1px solid #bbb;height:100%;}
-.adr-h{background:#333;color:#fff;font-size:10.5px;font-weight:bold;padding:2px 7px;letter-spacing:1px;}
-.adr-b{padding:5px 7px;}
-.adr-co{font-size:13.5px;font-weight:bold;margin-bottom:2px;color:#222;}
-.adr-ln{font-size:11px;color:#444;margin-bottom:1px;}
+.adr-h{background:#333;color:#fff;font-size:13.5px;font-weight:bold;padding:2px 7px;letter-spacing:1px;}
+.adr-b{padding:3px 7px;}
+.adr-co{font-size:18.5px;font-weight:bold;margin-bottom:2px;color:#222;}
+.adr-ln{font-size:15.5px;color:#444;margin-bottom:1px;}
 .editable{outline:none;min-height:12px;display:inline-block;min-width:40px;}
 .editable:focus{background:#fff8dc;border-radius:2px;}
 [contenteditable="true"]:empty:before{content:attr(data-placeholder);color:#bbb;font-style:italic;}
 
 /* ── SECTION TITLE ── */
-.sec-h{font-size:10px;font-weight:bold;background:#ebebeb;border:1px solid #bbb;border-left:4px solid #444;padding:3px 9px;margin:6px 6px 0;letter-spacing:0.5px;color:#222;}
+.sec-h{font-size:12.5px;font-weight:bold;background:#ebebeb;border:1px solid #bbb;border-left:4px solid #444;padding:2px 9px;margin:3px 6px 0;letter-spacing:0.5px;color:#222;}
 .px6{padding:0 6px;}
 
 /* ── ITEMS TABLE ── */
 table.it{width:100%;border-collapse:collapse;}
-table.it th{background:#444;color:#fff;padding:5px 3px;text-align:center;border:1px solid #555;font-size:10px;font-weight:bold;vertical-align:middle;}
+table.it th{background:#444;color:#fff;padding:5px 3px;text-align:center;border:1px solid #555;font-size:15px;font-weight:bold;vertical-align:middle;}
 table.it th.l{text-align:left;padding-left:5px;}
-table.it td{padding:2px 3px;border:1px solid #d0d0d0;font-size:11px;height:18px;color:#222;vertical-align:middle;}
+table.it td{padding:2px 3px;border:1px solid #d0d0d0;font-size:16.5px;height:17px;color:#222;vertical-align:middle;}
 table.it td.c{text-align:center;}
 table.it td.r{text-align:right;}
 table.it td.del-cell{text-align:center;width:18px;background:#fff8f8;}
 table.it tr:nth-child(even) td{background:#f8f8f8;}
 table.it tr:nth-child(even) td.del-cell{background:#fff8f8;}
-table.it tr.sub td{background:#e8e8e8!important;font-weight:bold;border-top:2px solid #444;font-size:11.5px;color:#222;}
+table.it tr.sub td{background:#e8e8e8!important;font-weight:bold;border-top:2px solid #444;font-size:15px;color:#222;}
 
 /* ── ITEM INPUTS ── */
-.it-input{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:9.5px;color:#222;outline:none;text-align:inherit;padding:1px 2px;}
+.it-input{width:100%;border:none;background:transparent;font-family:Arial,sans-serif;font-size:15px;color:#222;outline:none;text-align:inherit;padding:1px 2px;}
 .it-input:focus{background:#fff8dc;}
 .it-input.num{text-align:right;}
 .it-input.ctr{text-align:center;}
@@ -140,15 +140,15 @@ table.it tr.sub td{background:#e8e8e8!important;font-weight:bold;border-top:2px 
 .amt-input{font-weight:600;text-align:right;width:64px;max-width:64px;}
 
 /* ── DEL BUTTON ── */
-.del-btn{background:none;border:none;color:#cc0000;cursor:pointer;font-size:11px;font-weight:bold;padding:0 3px;opacity:0.6;}
+.del-btn{background:none;border:none;color:#cc0000;cursor:pointer;font-size:13px;font-weight:bold;padding:0 3px;opacity:0.6;}
 .del-btn:hover{opacity:1;}
 
 /* ── HSN TABLE ── */
 table.hs{width:100%;border-collapse:collapse;}
-table.hs th{background:#555;color:#fff;padding:5px 4px;text-align:center;border:1px solid #666;font-size:8.5px;font-weight:bold;vertical-align:middle;}
-table.hs td{padding:5px 4px;border:1px solid #d0d0d0;text-align:center;font-size:9.5px;color:#222;}
+table.hs th{background:#555;color:#fff;padding:5px 4px;text-align:center;border:1px solid #666;font-size:11px;font-weight:bold;vertical-align:middle;}
+table.hs td{padding:5px 4px;border:1px solid #d0d0d0;text-align:center;font-size:12px;color:#222;}
 table.hs tr.ht td{background:#e8e8e8;font-weight:bold;border-top:2px solid #444;color:#222;}
-.hsn-input{border:none;background:transparent;font-family:Arial,sans-serif;font-size:9.5px;color:#222;outline:none;text-align:center;width:60px;}
+.hsn-input{border:none;background:transparent;font-family:Arial,sans-serif;font-size:12px;color:#222;outline:none;text-align:center;width:60px;}
 .hsn-input:focus{background:#fff8dc;}
 
 /* ── BOTTOM TABLE ── */
@@ -157,57 +157,57 @@ table.hs tr.ht td{background:#e8e8e8;font-weight:bold;border-top:2px solid #444;
 .br{width:192px;vertical-align:top;}
 
 /* ── BOX ── */
-.bx{border:1px solid #bbb;margin-bottom:5px;}
-.bx-h{background:#333;color:#fff;font-size:9px;font-weight:bold;padding:3px 7px;}
-.bx-b{padding:5px 7px;}
+.bx{border:1px solid #bbb;margin-bottom:3px;}
+.bx-h{background:#333;color:#fff;font-size:11.5px;font-weight:bold;padding:3px 7px;}
+.bx-b{padding:3px 7px;}
 table.bkr{width:100%;border-collapse:collapse;}
-table.bkr td{font-size:9.5px;padding:1px 0;color:#333;}
+table.bkr td{font-size:12px;padding:1px 0;color:#333;}
 .bkl{font-weight:bold;width:80px;color:#222;}
 
 /* ── T&C ── */
-.tc p{font-size:9px;color:#555;margin-bottom:2px;}
+.tc p{font-size:11.5px;color:#555;margin-bottom:2px;}
 
 /* ── AMOUNT IN WORDS ── */
-.amw{border:1px solid #bbb;padding:5px 7px;background:#fafafa;margin-top:5px;}
-.amw-l{font-weight:bold;font-size:9px;margin-bottom:1px;color:#333;}
-.amw-v{font-style:italic;font-size:10px;color:#333;}
+.amw{border:1px solid #bbb;padding:3px 7px;background:#fafafa;margin-top:5px;}
+.amw-l{font-weight:bold;font-size:10.5px;margin-bottom:1px;color:#333;}
+.amw-v{font-style:italic;font-size:11.5px;color:#333;}
 
 /* ── TAX SUMMARY ── */
-.txb{border:1px solid #bbb;margin-bottom:5px;}
-.txh{background:#ebebeb;font-weight:bold;font-size:11.5px;padding:3px 7px;border-bottom:1px solid #bbb;text-align:center;letter-spacing:0.5px;color:#222;}
+.txb{border:1px solid #bbb;margin-bottom:3px;}
+.txh{background:#ebebeb;font-weight:bold;font-size:15px;padding:2px 7px;border-bottom:1px solid #bbb;text-align:center;letter-spacing:0.5px;color:#222;}
 table.tx{width:100%;border-collapse:collapse;}
-table.tx td{padding:4px 7px;font-size:10px;border-bottom:1px solid #eee;color:#333;}
+table.tx td{padding:4px 7px;font-size:11.5px;border-bottom:1px solid #eee;color:#333;}
 table.tx td.tl{color:#444;}
 table.tx td.ta{text-align:right;font-weight:bold;color:#222;white-space:nowrap;}
-tr.tt td{background:#444!important;color:#fff!important;font-weight:bold!important;font-size:13px!important;border-bottom:none!important;}
+tr.tt td{background:#444!important;color:#fff!important;font-weight:bold!important;font-size:17.5px!important;border-bottom:none!important;}
 tr.tr2 td{background:#f2f2f2;}
 tr.tb td{background:#e8e8e8;font-weight:bold;}
-.rcvd-input{border:none;background:transparent;font-family:Arial,sans-serif;font-size:10px;font-weight:bold;color:#222;outline:none;text-align:right;width:48px;max-width:48px;}
+.rcvd-input{border:none;background:transparent;font-family:Arial,sans-serif;font-size:11.5px;font-weight:bold;color:#222;outline:none;text-align:right;width:48px;max-width:48px;}
 .rcvd-input:focus{background:#fff8dc;}
 
 /* ── SIGNATORY ── */
 .sg{border:1px solid #bbb;padding:6px 7px;text-align:right;min-height:65px;}
-.sg-n{font-size:8.5px;color:#aaa;font-style:italic;}
+.sg-n{font-size:10px;color:#aaa;font-style:italic;}
 .sg-dl{border-top:1px dashed #bbb;width:110px;margin-left:auto;margin-top:36px;margin-bottom:3px;}
-.sg-f{font-size:9px;color:#555;}
-.sg-c{font-weight:bold;font-size:12px;color:#222;}
+.sg-f{font-size:10.5px;color:#555;}
+.sg-c{font-weight:bold;font-size:14px;color:#222;}
 
 /* ── RATE FIELD ── */
 .rate-wrap{display:flex;align-items:center;justify-content:center;gap:1px;}
 
 /* ── MOBILE ENTRY FLOW (screen only; print remains A4 invoice) ── */
 @media screen and (max-width: 720px) {
-  body{font-size:13px;background:#f3f4f6;}
+  body{font-size:15px;background:#f3f4f6;}
   .login-box{width:100%;max-width:360px;border-radius:8px;}
   html,body{max-width:100%;overflow-x:hidden;}
   .toolbar{position:sticky;top:0;padding:10px;gap:8px;align-items:stretch;display:grid;grid-template-columns:minmax(0,1fr);width:100%;}
-  .toolbar .tb-title{grid-column:1 / -1;width:100%;font-size:15px;margin:0;}
+  .toolbar .tb-title{grid-column:1 / -1;width:100%;font-size:17.5px;margin:0;}
   .toolbar .sep{display:none;}
   .toolbar label{display:flex;align-items:center;gap:8px;background:#444;padding:8px;border-radius:6px;min-width:0;}
-  .toolbar input[type=number]{height:34px;font-size:14px;}
-  .toolbar button{min-width:0;min-height:40px;padding:8px 8px;font-size:12px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .toolbar input[type=number]{height:34px;font-size:16px;}
+  .toolbar button{min-width:0;min-height:40px;padding:8px 8px;font-size:14px;border-radius:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .toolbar .btn-print{grid-column:1 / -1;}
-  .db-status{grid-column:1 / -1;width:100%;min-width:0;font-size:12px;padding:4px 0;}
+  .db-status{grid-column:1 / -1;width:100%;min-width:0;font-size:14px;padding:4px 0;}
 
   .page-wrap{padding:10px;display:block;}
   .inv{width:100%;border:none;background:transparent;}
@@ -215,31 +215,31 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
 
   .ibar,.adr-t,.btm-t{display:block;width:100%;margin:0 0 10px;border-collapse:separate;}
   .ibar{background:#fff;border:1px solid #d0d5dd;border-left:4px solid #333;border-radius:8px;padding:10px;}
-  .ibar-c{display:block;text-align:left!important;font-size:12px;margin-bottom:10px;}
+  .ibar-c{display:block;text-align:left!important;font-size:14px;margin-bottom:10px;}
   .ibar-c:last-child{margin-bottom:0;}
-  .ibar input{display:block;width:100%!important;margin-top:5px;border:1px solid #c7c7c7;background:#fff;border-radius:6px;padding:9px;font-size:15px;}
+  .ibar input{display:block;width:100%!important;margin-top:5px;border:1px solid #c7c7c7;background:#fff;border-radius:6px;padding:9px;font-size:17.5px;}
 
   .adr-t tbody,.adr-t tr,.adr-t td{display:block;width:100%;}
   .adr-c,.adr-c2{padding:0 0 10px!important;}
   .adr-box,.bx,.amw,.txb,.sg{background:#fff;border:1px solid #d0d5dd;border-radius:8px;overflow:hidden;margin-bottom:10px;}
-  .adr-h,.bx-h,.txh{font-size:12px;padding:9px 11px;letter-spacing:0.5px;}
+  .adr-h,.bx-h,.txh{font-size:14px;padding:9px 11px;letter-spacing:0.5px;}
   .adr-b,.bx-b{padding:10px 11px;}
-  .adr-co,.adr-ln,.editable{display:block;width:100%;font-size:14px;line-height:1.35;min-height:34px;}
-  .adr-co{font-size:16px;margin-bottom:8px;}
+  .adr-co,.adr-ln,.editable{display:block;width:100%;font-size:16px;line-height:1.35;min-height:34px;}
+  .adr-co{font-size:18.5px;margin-bottom:8px;}
   .adr-ln{margin-bottom:8px!important;}
   .editable{border:1px solid #d0d5dd;border-radius:6px;padding:8px;background:#fff;}
 
-  .sec-h{font-size:13px;margin:12px 0 0;border-radius:8px 8px 0 0;padding:10px 12px;}
+  .sec-h{font-size:15px;margin:12px 0 0;border-radius:8px 8px 0 0;padding:10px 12px;}
   .px6{padding:0;}
 
   table.it,table.it thead,table.it tbody,table.it tfoot,table.it tr,table.it td{display:block;width:100%;}
   table.it{border-collapse:separate;}
   table.it thead{display:none;}
   table.it tr{background:#fff;border:1px solid #d0d5dd;border-radius:8px;margin-bottom:10px;overflow:hidden;}
-  table.it td{border:none;border-bottom:1px solid #edf0f3;min-height:0;height:auto;padding:8px 10px;font-size:13px;text-align:left!important;background:#fff!important;}
+  table.it td{border:none;border-bottom:1px solid #edf0f3;min-height:0;height:auto;padding:8px 10px;font-size:15px;text-align:left!important;background:#fff!important;}
   table.it td:last-child{border-bottom:none;}
   table.it td.del-cell{display:block!important;width:100%;text-align:right!important;background:#fff8f8!important;padding:5px 8px;}
-  .del-btn{font-size:16px;padding:4px 8px;}
+  .del-btn{font-size:18.5px;padding:4px 8px;}
   table.it td:nth-child(2)::before{content:'Sr. No.';}
   table.it td:nth-child(3)::before{content:'Date';}
   table.it td:nth-child(4)::before{content:'Description';}
@@ -248,25 +248,25 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   table.it td:nth-child(7)::before{content:'Quantity';}
   table.it td:nth-child(8)::before{content:'Rate';}
   table.it td:nth-child(9)::before{content:'Taxable Amount';}
-  table.it td::before{display:block;font-size:10px;font-weight:bold;text-transform:uppercase;color:#666;margin-bottom:4px;letter-spacing:0.4px;}
+  table.it td::before{display:block;font-size:12px;font-weight:bold;text-transform:uppercase;color:#666;margin-bottom:4px;letter-spacing:0.4px;}
   table.it tr.sub{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid #444;background:#fff;}
   table.it tr.sub td{display:block;border-bottom:1px solid #ddd!important;text-align:left!important;}
   table.it tr.sub td.del-cell{display:none!important;}
   table.it tr.sub td:first-of-type{grid-column:1 / -1;text-align:center!important;background:#e8e8e8!important;}
   table.it tr.sub td::before{content:'';}
 
-  .it-input,.hsn-input,.rcvd-input{border:1px solid #d0d5dd;background:#fff;border-radius:6px;padding:9px;font-size:15px;}
+  .it-input,.hsn-input,.rcvd-input{border:1px solid #d0d5dd;background:#fff;border-radius:6px;padding:9px;font-size:17.5px;}
   .it-input.num,.it-input.ctr{text-align:left;}
   .rate-wrap{display:grid;grid-template-columns:1fr 74px;gap:8px;justify-content:stretch;}
   .rate-wrap .it-input{width:100%!important;}
   .amt-wrap{justify-content:flex-start;gap:8px;}
-  .amt-prefix{font-size:16px;}
+  .amt-prefix{font-size:18.5px;}
   .amt-input{width:100%!important;max-width:none!important;text-align:left;}
 
   table.hs,table.hs thead,table.hs tbody,table.hs tr,table.hs td{display:block;width:100%;}
   table.hs thead{display:none;}
   table.hs tr{background:#fff;border:1px solid #d0d5dd;border-radius:8px;margin-bottom:10px;overflow:hidden;}
-  table.hs td{border:none;border-bottom:1px solid #edf0f3;text-align:left;font-size:13px;padding:8px 10px;}
+  table.hs td{border:none;border-bottom:1px solid #edf0f3;text-align:left;font-size:15px;padding:8px 10px;}
   table.hs td:last-child{border-bottom:none;}
   table.hs td:nth-child(1)::before{content:'HSN/SAC Code';}
   table.hs td:nth-child(2)::before{content:'Description';}
@@ -277,21 +277,21 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
   table.hs td:nth-child(7)::before{content:'SGST Amount';}
   table.hs td:nth-child(8)::before{content:'Total Tax';}
   table.hs td:nth-child(9)::before{content:'Gross Amount';}
-  table.hs td::before{display:block;font-size:10px;font-weight:bold;text-transform:uppercase;color:#666;margin-bottom:4px;letter-spacing:0.4px;}
+  table.hs td::before{display:block;font-size:12px;font-weight:bold;text-transform:uppercase;color:#666;margin-bottom:4px;letter-spacing:0.4px;}
   table.hs tr.ht td:first-child::before{content:'';}
 
   .btm-t tbody,.btm-t tr,.btm-t td{display:block;width:100%;}
   .bl,.br{width:100%!important;padding:0!important;}
-  table.tx td{font-size:14px;padding:10px;}
+  table.tx td{font-size:16px;padding:10px;}
   .rcvd-input{width:90px;max-width:90px;text-align:right;}
   .sg{min-height:110px;}
   .sg-dl{margin-top:46px;}
   .payment-panel{width:auto;margin:0 10px 20px;border-radius:8px;padding:12px;}
-  .payment-panel h2{font-size:15px;}
+  .payment-panel h2{font-size:17.5px;}
   .payment-grid{display:block;}
   .payment-field{margin-bottom:10px;}
-  .payment-field label{font-size:11px;}
-  .payment-field input,.payment-value{font-size:15px;border-radius:6px;padding:10px;}
+  .payment-field label{font-size:12.5px;}
+  .payment-field input,.payment-value{font-size:17.5px;border-radius:6px;padding:10px;}
   .payment-actions{display:grid;grid-template-columns:1fr;gap:8px;}
   .payment-actions button{min-height:40px;border-radius:6px;}
 }
@@ -338,8 +338,8 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
 <div class="toolbar no-print">
   <span class="tb-title">⚡ Invoice Entry</span>
   <div class="sep"></div>
-  <a href="master.html" style="color:#fff; text-decoration:none; font-weight:bold; font-size:11px; background:#673AB7; padding:6px 12px; border-radius:4px; margin-right:8px;">PARTY MASTER</a>
-  <a href="report.html" style="color:#fff; text-decoration:none; font-weight:bold; font-size:11px; background:#009688; padding:6px 12px; border-radius:4px; margin-right:8px;">REPORTS</a>
+  <a href="master.html" style="color:#fff; text-decoration:none; font-weight:bold; font-size:12.5px; background:#673AB7; padding:6px 12px; border-radius:4px; margin-right:8px;">PARTY MASTER</a>
+  <a href="report.html" style="color:#fff; text-decoration:none; font-weight:bold; font-size:12.5px; background:#009688; padding:6px 12px; border-radius:4px; margin-right:8px;">REPORTS</a>
   <div class="sep"></div>
   <label>GST Rate %
     <input type="number" id="gst-rate" value="18" min="0" max="28" step="0.1" style="width:50px;" oninput="updateTotals()">
@@ -604,7 +604,7 @@ tr.tb td{background:#e8e8e8;font-weight:bold;}
 
 <script>
 // ─── CONFIG ───
-const DEFAULT_ROWS = 12;
+const DEFAULT_ROWS = 10;
 const SUPABASE_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co';
 const API_URL = SUPABASE_URL + '/functions/v1/shreebalaji-api';
 const LOGIN_USER = 'ShreeBalaji';
@@ -714,7 +714,7 @@ function createRow(data={}){
 
   tr.innerHTML = `
     <td class="del-cell no-print"><button class="del-btn" onclick="delRow(this)" title="Delete row">✕</button></td>
-    <td class="c" style="font-size:8px;color:#888;">${idx}</td>
+    <td class="c" style="font-size:9.5px;color:#888;">${idx}</td>
     <td class="c"><input class="it-input ctr" data-role="date" placeholder="Date" value="${data.date||''}"></td>
     <td class="col-party"><input class="it-input" data-role="party" placeholder="Party Name…" value="${data.party||''}"></td>
     <td><input class="it-input" data-role="desc" placeholder="Description…" value="${data.desc||''}"></td>
@@ -723,7 +723,7 @@ function createRow(data={}){
     <td class="c">
       <div class="rate-wrap">
         <input class="it-input num" data-role="qty" placeholder="0" value="${qty}" style="width:55px;" oninput="calcRow(this)">
-        <input class="it-input ctr" data-role="unit" placeholder="Unit" value="${data.unit||''}" style="width:32px;font-size:7.5px;color:#666;">
+        <input class="it-input ctr" data-role="unit" placeholder="Unit" value="${data.unit||''}" style="width:32px;font-size:9px;color:#666;">
       </div>
     </td>
     <td class="c"><input class="it-input num" data-role="rate" placeholder="0.00" value="${rate}" style="width:100%;" oninput="calcRow(this)"></td>
