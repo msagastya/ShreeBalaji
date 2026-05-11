@@ -6,6 +6,7 @@
 <title>Business Report — Shree Balaji Tempo Services</title>
 <script src="assets/js/security-utils.js"></script>
 <script src="assets/js/data-cache.js"></script>
+<script src="assets/js/ui-loader.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#f0f0f0;padding:20px;}
@@ -153,6 +154,7 @@ tr:nth-child(even){background:#fafafa;}
                 <th class="amt">Taxable Amt</th>
                 <th class="amt">GST (18%)</th>
                 <th class="amt">Total Amount</th>
+                <th>Detail</th>
             </tr>
         </thead>
         <tbody id="invoice-list"></tbody>
@@ -162,6 +164,7 @@ tr:nth-child(even){background:#fafafa;}
                 <td id="tot-taxable" class="amt">0.00</td>
                 <td id="tot-gst" class="amt">0.00</td>
                 <td id="tot-grand" class="amt">0.00</td>
+                <td></td>
             </tr>
         </tfoot>
     </table>
@@ -237,7 +240,7 @@ function parseDate(str) {
 async function loadAllData(){
     document.getElementById('gen-date').textContent = new Date().toLocaleString();
     const status = document.getElementById('db-status');
-    status.textContent = 'Fetching Invoices...';
+    SBUI.setBusy(true, 'Loading summaries...');
     
     try {
         const result = await SBDataCache.listInvoices(api);
@@ -245,36 +248,20 @@ async function loadAllData(){
         reportData = [];
         
         const partyNames = new Set();
-        
-        for(const row of rows) {
-            status.textContent = `Loading ${row.invoice_no}...`;
-            const full = await SBDataCache.loadInvoice(api, row.invoice_no);
-            const d = full.data || {};
-            
-            // Calculate totals
-            let taxable = 0;
-            (d.items || []).forEach(it => {
-                let rowAmt = parseFloat(String(it.amt || 0).replace(/,/g,''));
-                if(!rowAmt && it.qty && it.rate) {
-                    rowAmt = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
-                }
-                taxable += rowAmt;
-            });
-            
-            const item = {
-                date: d.invoice?.date || '',
-                dateObj: parseDate(d.invoice?.date),
-                no: d.invoice?.no || '',
-                party: d.billTo?.name || '',
-                taxable: taxable,
-                gst: taxable * 0.18,
-                total: taxable * 1.18,
-                details: d.billTo || {}
+        reportData = rows.map(row => {
+            if(row.party_name) partyNames.add(row.party_name);
+            return {
+                date: row.invoice_date || '',
+                dateObj: parseDate(row.invoice_date),
+                no: row.invoice_no || '',
+                party: row.party_name || '',
+                taxable: 0,
+                gst: 0,
+                total: 0,
+                loaded: false,
+                details: { name: row.party_name || '' }
             };
-            
-            reportData.push(item);
-            if(item.party) partyNames.add(item.party);
-        }
+        });
         
         // Fill Company Dropdown
         const compSelect = document.getElementById('filter-company');
@@ -286,11 +273,43 @@ async function loadAllData(){
             compSelect.appendChild(opt);
         });
         
-        status.textContent = 'Data Ready';
+        SBUI.setBusy(false, 'Summary ready');
         applyFilters();
     } catch(e) {
         console.error(e);
-        status.textContent = 'Error loading data';
+        SBUI.setBusy(false, 'Error loading data');
+    }
+}
+
+async function loadReportInvoice(invoiceNo){
+    const item = reportData.find(row => row.no === invoiceNo);
+    if(!item) return;
+    SBUI.setBusy(true, `Loading ${invoiceNo}...`);
+    try{
+        const full = await SBDataCache.loadInvoice(api, invoiceNo);
+        const d = full.data || {};
+        let taxable = 0;
+        (d.items || []).forEach(it => {
+            let rowAmt = parseFloat(String(it.amt || 0).replace(/,/g,''));
+            if(!rowAmt && it.qty && it.rate) rowAmt = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
+            taxable += rowAmt;
+        });
+        Object.assign(item, {
+            date: d.invoice?.date || item.date,
+            dateObj: parseDate(d.invoice?.date || item.date),
+            no: d.invoice?.no || item.no,
+            party: d.billTo?.name || item.party,
+            taxable,
+            gst: taxable * 0.18,
+            total: taxable * 1.18,
+            loaded: true,
+            details: d.billTo || item.details
+        });
+        applyFilters();
+        SBUI.setBusy(false, 'Detail loaded');
+    }catch(e){
+        console.error(e);
+        SBUI.setBusy(false, 'Detail failed');
     }
 }
 
@@ -338,15 +357,18 @@ function renderTables(data) {
             <td>${escapeHtml(d.date)}</td>
             <td>${escapeHtml(d.no)}</td>
             <td>${escapeHtml(d.party)}</td>
-            <td class="amt">${fmt(d.taxable)}</td>
-            <td class="amt">${fmt(d.gst)}</td>
-            <td class="amt">${fmt(d.total)}</td>
+            <td class="amt">${d.loaded ? fmt(d.taxable) : '-'}</td>
+            <td class="amt">${d.loaded ? fmt(d.gst) : '-'}</td>
+            <td class="amt">${d.loaded ? fmt(d.total) : '-'}</td>
+            <td>${d.loaded ? 'Loaded' : `<button class="print-report" onclick="loadReportInvoice(${JSON.stringify(d.no)})">LOAD</button>`}</td>
         `;
         invTable.appendChild(tr);
         
-        gTaxable += d.taxable;
-        gGst += d.gst;
-        gTotal += d.total;
+        if(d.loaded){
+            gTaxable += d.taxable;
+            gGst += d.gst;
+            gTotal += d.total;
+        }
         
         // Collect Party info for the unique list
         if(d.party && !uniqueParties.has(d.party)) {

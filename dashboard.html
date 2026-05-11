@@ -6,6 +6,7 @@
 <title>Dashboard — Shree Balaji Tempo Services</title>
 <script src="assets/js/security-utils.js"></script>
 <script src="assets/js/data-cache.js"></script>
+<script src="assets/js/ui-loader.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;font-size:14px}
@@ -63,15 +64,15 @@ body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;fon
       <a class="tile" href="report.html"><strong>Reports</strong><span>Filter invoices by party, month, amount, and print business reports.</span><b>View Reports</b></a>
     </section>
     <section class="stats">
-      <div class="stat"><label>Recent Invoices</label><div id="stat-count">0</div></div>
-      <div class="stat"><label>Taxable Value</label><div id="stat-taxable">₹ 0</div></div>
-      <div class="stat"><label>Gross Value</label><div id="stat-total">₹ 0</div></div>
-      <div class="stat"><label>Balance Due</label><div id="stat-due">₹ 0</div></div>
+      <div class="stat"><label>Total Invoices</label><div id="stat-count">0</div></div>
+      <div class="stat"><label>Unique Parties</label><div id="stat-parties">0</div></div>
+      <div class="stat"><label>Latest Date</label><div id="stat-latest">-</div></div>
+      <div class="stat"><label>Data Mode</label><div id="stat-mode">Summary</div></div>
     </section>
     <section class="panel">
       <h2>Recent Invoices</h2>
       <table class="recent">
-        <thead><tr><th>Invoice</th><th>Date</th><th>Party</th><th class="amt">Total</th><th class="amt">Due</th></tr></thead>
+        <thead><tr><th>Invoice</th><th>Date</th><th>Party</th><th>Action</th></tr></thead>
         <tbody id="recent-body"><tr><td colspan="5">Loading...</td></tr></tbody>
       </table>
     </section>
@@ -87,9 +88,7 @@ function applyLoginState(){const a=getAuth();const ok=a.username===LOGIN_USER&&a
 function login(e){e.preventDefault();const u=document.getElementById('login-user').value.trim();const p=document.getElementById('login-pass').value;if(u!==LOGIN_USER||p!==LOGIN_PASS){document.getElementById('login-error').textContent='Invalid username or password';return}sessionStorage.setItem('sb_user',u);sessionStorage.setItem('sb_pass',p);applyLoginState()}
 function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
 async function api(action,payload={}){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...getAuth(),...payload})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Request failed');return data}
-function invoiceTotals(data){let taxable=0;(data.items||[]).forEach(it=>{let amt=parseMoney(it.amt);if(!amt&&it.qty&&it.rate)amt=parseMoney(it.qty)*parseMoney(it.rate);taxable+=amt});const rate=parseMoney(data.invoice?.gstRate||18);const total=Math.round(taxable+(taxable*rate/100));const received=parseMoney(data.invoice?.receivedAmount||data.payment?.receivedAmount);return{taxable,total,due:Math.max(total-received,0)}}
-async function loadDashboard(){const status=document.getElementById('db-status');status.textContent='Loading list...';try{const list=await SBDataCache.listInvoices(api);const rows=list.rows||[];const recent=rows.slice(0,12);const body=document.getElementById('recent-body');body.innerHTML='';document.getElementById('stat-count').textContent=rows.length;document.getElementById('stat-taxable').textContent='-';document.getElementById('stat-total').textContent='-';document.getElementById('stat-due').textContent='-';for(const row of recent){const tr=document.createElement('tr');tr.dataset.invoiceNo=row.invoice_no;tr.innerHTML=`<td><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">${escapeHtml(row.invoice_no)}</a></td><td>${escapeHtml(row.invoice_date||'')}</td><td>${escapeHtml(row.party_name||'')}</td><td class="amt">...</td><td class="amt">...</td>`;body.appendChild(tr)}if(!rows.length){body.innerHTML='<tr><td colspan="5">No invoices found.</td></tr>';status.textContent='Ready';return}status.textContent='Ready';hydrateDashboardTotals(recent)}catch(e){console.error(e);status.textContent='Error';document.getElementById('recent-body').innerHTML='<tr><td colspan="5">Could not load dashboard.</td></tr>'}}
-async function hydrateDashboardTotals(rows){const status=document.getElementById('db-status');let taxable=0,total=0,due=0,done=0;for(const row of rows){try{const full=await SBDataCache.loadInvoice(api,row.invoice_no);const data=full.data||{};const t=invoiceTotals(data);taxable+=t.taxable;total+=t.total;due+=t.due;const tr=document.querySelector(`tr[data-invoice-no="${CSS.escape(row.invoice_no)}"]`);if(tr){tr.children[1].textContent=data.invoice?.date||row.invoice_date||'';tr.children[2].textContent=data.billTo?.name||row.party_name||'';tr.children[3].textContent='₹ '+fmt(t.total);tr.children[4].textContent='₹ '+fmt(t.due)}}catch(e){console.error(e)}done++;status.textContent=`Details ${done}/${rows.length}`;document.getElementById('stat-taxable').textContent='₹ '+fmt(taxable);document.getElementById('stat-total').textContent='₹ '+fmt(total);document.getElementById('stat-due').textContent='₹ '+fmt(due)}status.textContent='Ready'}
+async function loadDashboard(){SBUI.setBusy(true,'Loading summaries...');try{const list=await SBDataCache.listInvoices(api);const rows=list.rows||[];const recent=rows.slice(0,12);const body=document.getElementById('recent-body');body.innerHTML='';document.getElementById('stat-count').textContent=rows.length;document.getElementById('stat-parties').textContent=new Set(rows.map(r=>r.party_name).filter(Boolean)).size;document.getElementById('stat-latest').textContent=rows[0]?.invoice_date||'-';document.getElementById('stat-mode').textContent='Summary';for(const row of recent){const tr=document.createElement('tr');tr.innerHTML=`<td><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">${escapeHtml(row.invoice_no)}</a></td><td>${escapeHtml(row.invoice_date||'')}</td><td>${escapeHtml(row.party_name||'')}</td><td><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">Open Detail</a></td>`;body.appendChild(tr)}if(!rows.length)body.innerHTML='<tr><td colspan="4">No invoices found.</td></tr>';SBUI.setBusy(false,'Ready')}catch(e){console.error(e);SBUI.setBusy(false,'Error');document.getElementById('recent-body').innerHTML='<tr><td colspan="4">Could not load dashboard.</td></tr>'}}
 applyLoginState();
 </script>
 </body>

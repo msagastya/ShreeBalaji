@@ -6,6 +6,7 @@
 <title>Party Master — Shree Balaji Tempo Services</title>
 <script src="assets/js/security-utils.js"></script>
 <script src="assets/js/data-cache.js"></script>
+<script src="assets/js/ui-loader.js"></script>
 <style>
 /* Reuse base styles from index.html */
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -273,9 +274,8 @@ async function loadParty(nameToLoad){
 }
 
 async function fetchRecentParties(){
-    setDbStatus('Fetching list...');
+    SBUI.setBusy(true, 'Loading party summaries...');
     try {
-        // Since listParties is not available, we get party names from recent invoices
         const result = await SBDataCache.listInvoices(api);
         const rows = result.rows || [];
         const uniqueParties = [...new Set(rows.map(r => r.party_name))].filter(Boolean);
@@ -286,26 +286,18 @@ async function fetchRecentParties(){
         for(const name of uniqueParties) {
             const tr = document.createElement('tr');
             tr.onclick = () => loadParty(name);
-            
-            // We load details for each to fill the table (this might be slow but it works as a master list)
-            SBDataCache.loadParty(api, name).then(res => {
-                const d = res.details || {};
-                tr.innerHTML = `
-                    <td><div class="mobile-label">Name</div>${escapeHtml(name)}</td>
-                    <td><div class="mobile-label">Address</div>${escapeHtml(d.address || '-')}</td>
-                    <td><div class="mobile-label">GSTIN/PAN</div>${escapeHtml(d.gstin || '-')} / ${escapeHtml(d.pan || '-')}</td>
-                    <td><div class="mobile-label">Mobile</div>${escapeHtml(d.mobile || '-')}</td>
-                    <td><div class="mobile-label">State</div>${escapeHtml(d.state || '-')}</td>
-                `;
-            }).catch(() => {
-                tr.innerHTML = `<td>${escapeHtml(name)}</td><td colspan="4">Error loading details</td>`;
-            });
-            
+            tr.innerHTML = `
+                <td><div class="mobile-label">Name</div>${escapeHtml(name)}</td>
+                <td><div class="mobile-label">Address</div>Click to load details</td>
+                <td><div class="mobile-label">GSTIN/PAN</div>-</td>
+                <td><div class="mobile-label">Mobile</div>-</td>
+                <td><div class="mobile-label">State</div>-</td>
+            `;
             tbody.appendChild(tr);
         }
-        setDbStatus('List Ready');
+        SBUI.setBusy(false, 'Summary ready');
     } catch(e) {
-        setDbStatus('List failed');
+        SBUI.setBusy(false, 'List failed');
     }
 }
 
