@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Business Report — Shree Balaji Tempo Services</title>
+<script src="assets/js/security-utils.js"></script>
+<script src="assets/js/data-cache.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#f0f0f0;padding:20px;}
@@ -15,9 +17,13 @@ body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#f0f0f0;p
 .login-box button{width:100%;padding:10px;background:#333;color:#fff;border:none;cursor:pointer;}
 .logged-in .login-screen{display:none;}
 
-.toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:15px;margin-bottom:20px;border-radius:4px;flex-wrap:wrap;}
-.toolbar a{color:#fff;text-decoration:none;font-weight:bold;font-size:13px;}
-.db-status{margin-left:auto;font-size:12px;color:#ccc;}
+.toolbar{background:#102433;color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;margin:-20px -20px 20px;flex-wrap:wrap;box-shadow:0 8px 24px rgba(15,23,42,.18);}
+.toolbar .tb-title{font-weight:bold;letter-spacing:.8px;margin-right:8px;font-size:14px;}
+.toolbar a{color:#fff;text-decoration:none;font-size:12.5px;font-weight:bold;background:rgba(255,255,255,.1);padding:7px 11px;border-radius:4px;}
+.toolbar a.active{background:#d6b767;color:#102433;}
+.db-status{margin-left:auto;font-size:12.5px;color:#dce7ef;}
+.logout{border:0;background:#263d4d;color:#fff;padding:7px 11px;border-radius:4px;cursor:pointer;font-size:12.5px;font-weight:bold;}
+.print-report{padding:7px 14px;background:#207c48;color:#fff;border:none;border-radius:4px;cursor:pointer;font-weight:bold;}
 
 /* Filter Controls */
 .controls{background:#444;padding:10px 20px;display:flex;gap:15px;align-items:center;border-radius:4px;margin-bottom:20px;flex-wrap:wrap;}
@@ -59,10 +65,15 @@ tr:nth-child(even){background:#fafafa;}
 </div>
 
 <div class="toolbar no-print">
-    <a href="index.html">← INVOICE ENTRY</a>
-    <a href="master.html">PARTY MASTER</a>
-    <button onclick="window.print()" style="padding:5px 15px; background:#4CAF50; color:#fff; border:none; border-radius:3px; cursor:pointer; font-weight:bold;">PRINT TO PDF</button>
+    <div class="tb-title">SHREE BALAJI</div>
+    <a href="dashboard.html">DASHBOARD</a>
+    <a href="index.html">PREVIEW</a>
+    <a href="invoice-entry.html">ENTRY</a>
+    <a href="master.html">PARTIES</a>
+    <a href="payments.html">PAYMENTS</a>
+    <a class="active" href="report.html">REPORTS</a>
     <div class="db-status" id="db-status">Loading data...</div>
+    <button class="logout" onclick="logout()">LOGOUT</button>
 </div>
 
 <div class="controls no-print">
@@ -106,6 +117,7 @@ tr:nth-child(even){background:#fafafa;}
             <option value="amt-low">Amount (Low to High)</option>
         </select>
     </div>
+    <button class="print-report" onclick="window.print()">PRINT TO PDF</button>
 </div>
 
 <div class="container">
@@ -193,6 +205,12 @@ function login(event){
   applyLoginState();
 }
 
+function logout(){
+  sessionStorage.removeItem('sb_user');
+  sessionStorage.removeItem('sb_pass');
+  applyLoginState();
+}
+
 async function api(action, payload={}){
   const auth = getAuth();
   const response = await fetch(API_URL, {
@@ -222,7 +240,7 @@ async function loadAllData(){
     status.textContent = 'Fetching Invoices...';
     
     try {
-        const result = await api('listInvoices');
+        const result = await SBDataCache.listInvoices(api);
         const rows = result.rows || [];
         reportData = [];
         
@@ -230,7 +248,7 @@ async function loadAllData(){
         
         for(const row of rows) {
             status.textContent = `Loading ${row.invoice_no}...`;
-            const full = await api('loadInvoice', { invoiceNo: row.invoice_no });
+            const full = await SBDataCache.loadInvoice(api, row.invoice_no);
             const d = full.data || {};
             
             // Calculate totals
@@ -260,6 +278,7 @@ async function loadAllData(){
         
         // Fill Company Dropdown
         const compSelect = document.getElementById('filter-company');
+        compSelect.innerHTML = '<option value="">All Companies</option>';
         [...partyNames].sort().forEach(name => {
             const opt = document.createElement('option');
             opt.value = name;
@@ -316,9 +335,9 @@ function renderTables(data) {
         // Invoice Row
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${d.date}</td>
-            <td>${d.no}</td>
-            <td>${d.party}</td>
+            <td>${escapeHtml(d.date)}</td>
+            <td>${escapeHtml(d.no)}</td>
+            <td>${escapeHtml(d.party)}</td>
             <td class="amt">${fmt(d.taxable)}</td>
             <td class="amt">${fmt(d.gst)}</td>
             <td class="amt">${fmt(d.total)}</td>
@@ -339,10 +358,10 @@ function renderTables(data) {
     [...uniqueParties.values()].sort((a,b) => a.name.localeCompare(b.name)).forEach(p => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td><b>${p.name}</b></td>
-            <td>${p.gstin || '-'}<br><small>${p.pan || '-'}</small></td>
-            <td>${p.mobile || '-'}</td>
-            <td>${p.address || '-'}</td>
+            <td><b>${escapeHtml(p.name)}</b></td>
+            <td>${escapeHtml(p.gstin || '-')}<br><small>${escapeHtml(p.pan || '-')}</small></td>
+            <td>${escapeHtml(p.mobile || '-')}</td>
+            <td>${escapeHtml(p.address || '-')}</td>
         `;
         pTable.appendChild(tr);
     });

@@ -1,13 +1,22 @@
 
 import requests
 import json
+import os
 from datetime import datetime
 
-API_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api'
+API_URL = os.environ.get(
+    'SHREEBALAJI_API_URL',
+    'https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api'
+)
 AUTH = {
-    "username": "ShreeBalaji",
-    "password": "ShreeBalaji"
+    "username": os.environ.get("SHREEBALAJI_API_USER", ""),
+    "password": os.environ.get("SHREEBALAJI_API_PASSWORD", "")
 }
+
+if not AUTH["username"] or not AUTH["password"]:
+    raise SystemExit(
+        "Set SHREEBALAJI_API_USER and SHREEBALAJI_API_PASSWORD before running this script."
+    )
 
 def create_invoice_data(inv_no, party_name, gstin, pan, mobile, address, items_data):
     items = []

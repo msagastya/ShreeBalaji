@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Party Master — Shree Balaji Tempo Services</title>
+<script src="assets/js/security-utils.js"></script>
+<script src="assets/js/data-cache.js"></script>
 <style>
 /* Reuse base styles from index.html */
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -17,10 +19,13 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:14px;color:#222;background
 .login-box button{width:100%;margin-top:14px;padding:9px;border:none;background:#333;color:#fff;font-weight:bold;cursor:pointer;}
 .logged-in .login-screen{display:none;}
 
-.toolbar{background:#333;color:#fff;padding:10px 20px;display:flex;align-items:center;gap:14px;margin-bottom:20px;border-radius:4px;}
-.toolbar a{color:#fff;text-decoration:none;font-weight:bold;font-size:13px;}
-.toolbar .sep{width:1px;height:16px;background:#555;}
-.db-status{font-size:13px;color:#ddd;margin-left:auto;}
+.toolbar{background:#102433;color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;margin:-20px -20px 20px;flex-wrap:wrap;box-shadow:0 8px 24px rgba(15,23,42,.18);}
+.toolbar .tb-title{font-weight:bold;letter-spacing:.8px;margin-right:8px;font-size:14px;}
+.toolbar a{color:#fff;text-decoration:none;font-size:12.5px;font-weight:bold;background:rgba(255,255,255,.1);padding:7px 11px;border-radius:4px;}
+.toolbar a.active{background:#d6b767;color:#102433;}
+.toolbar .sep{display:none;}
+.db-status{font-size:12.5px;color:#dce7ef;margin-left:auto;}
+.logout{border:0;background:#263d4d;color:#fff;padding:7px 11px;border-radius:4px;cursor:pointer;font-size:12.5px;font-weight:bold;}
 
 .container{max-width:1000px;margin:0 auto;background:#fff;border:1px solid #bbb;padding:20px;box-shadow:0 2px 10px rgba(0,0,0,0.05);}
 h1{font-size:21px;margin-bottom:20px;border-bottom:2px solid #333;padding-bottom:10px;}
@@ -77,11 +82,19 @@ table.party-list tr:hover{background:#fff8dc;cursor:pointer;}
 <div class="toolbar">
     <div class="tb-title">SHREE BALAJI</div>
     <div class="sep"></div>
-    <a href="index.html">INVOICE</a>
+    <a href="dashboard.html">DASHBOARD</a>
     <div class="sep"></div>
-    <a href="master.html" style="text-decoration:underline;">PARTY MASTER</a>
+    <a href="index.html">PREVIEW</a>
+    <div class="sep"></div>
+    <a href="invoice-entry.html">ENTRY</a>
+    <div class="sep"></div>
+    <a class="active" href="master.html">PARTIES</a>
+    <div class="sep"></div>
+    <a href="payments.html">PAYMENTS</a>
+    <div class="sep"></div>
+    <a href="report.html">REPORTS</a>
     <div class="db-status" id="db-status">Ready</div>
-    <button onclick="logout()" style="background:#555; color:#fff; border:none; padding:4px 10px; border-radius:3px; cursor:pointer; font-size:12px;">LOGOUT</button>
+    <button class="logout" onclick="logout()">LOGOUT</button>
 </div>
 
 <div class="container">
@@ -224,6 +237,7 @@ async function saveParty(){
     setDbStatus('Saving...');
     try {
         await api('saveParty', { name, details });
+        SBDataCache.invalidateParty(name);
         setDbStatus('Saved');
         alert('Party saved successfully');
         fetchRecentParties();
@@ -239,7 +253,7 @@ async function loadParty(nameToLoad){
     
     setDbStatus('Loading...');
     try {
-        const result = await api('loadParty', { name });
+        const result = await SBDataCache.loadParty(api, name);
         if(!result.details) {
             setDbStatus('Not found');
             alert('Party not found');
@@ -262,7 +276,7 @@ async function fetchRecentParties(){
     setDbStatus('Fetching list...');
     try {
         // Since listParties is not available, we get party names from recent invoices
-        const result = await api('listInvoices');
+        const result = await SBDataCache.listInvoices(api);
         const rows = result.rows || [];
         const uniqueParties = [...new Set(rows.map(r => r.party_name))].filter(Boolean);
         
@@ -274,17 +288,17 @@ async function fetchRecentParties(){
             tr.onclick = () => loadParty(name);
             
             // We load details for each to fill the table (this might be slow but it works as a master list)
-            api('loadParty', { name }).then(res => {
+            SBDataCache.loadParty(api, name).then(res => {
                 const d = res.details || {};
                 tr.innerHTML = `
-                    <td><div class="mobile-label">Name</div>${name}</td>
-                    <td><div class="mobile-label">Address</div>${d.address || '-'}</td>
-                    <td><div class="mobile-label">GSTIN/PAN</div>${d.gstin || '-'} / ${d.pan || '-'}</td>
-                    <td><div class="mobile-label">Mobile</div>${d.mobile || '-'}</td>
-                    <td><div class="mobile-label">State</div>${d.state || '-'}</td>
+                    <td><div class="mobile-label">Name</div>${escapeHtml(name)}</td>
+                    <td><div class="mobile-label">Address</div>${escapeHtml(d.address || '-')}</td>
+                    <td><div class="mobile-label">GSTIN/PAN</div>${escapeHtml(d.gstin || '-')} / ${escapeHtml(d.pan || '-')}</td>
+                    <td><div class="mobile-label">Mobile</div>${escapeHtml(d.mobile || '-')}</td>
+                    <td><div class="mobile-label">State</div>${escapeHtml(d.state || '-')}</td>
                 `;
             }).catch(() => {
-                tr.innerHTML = `<td>${name}</td><td colspan="4">Error loading details</td>`;
+                tr.innerHTML = `<td>${escapeHtml(name)}</td><td colspan="4">Error loading details</td>`;
             });
             
             tbody.appendChild(tr);

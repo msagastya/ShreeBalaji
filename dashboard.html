@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Shree Balaji Tempo Services</title>
+<script src="assets/js/security-utils.js"></script>
+<script src="assets/js/data-cache.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;font-size:14px}
+.logged-out .app{display:none}.logged-in .login-screen{display:none}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{width:min(340px,100%);background:#fff;border:1px solid #c6d1da;padding:22px;box-shadow:0 18px 42px rgba(15,23,42,.14)}
+.login-box h1{font-size:22px;margin-bottom:14px;color:#102433}.login-box label{display:block;font-size:12px;font-weight:bold;margin:10px 0 5px}
+.login-box input{width:100%;border:1px solid #b8c4cc;padding:9px;font-size:15px}.login-box button{width:100%;margin-top:14px;padding:10px;border:0;background:#102433;color:#fff;font-weight:bold;cursor:pointer}
+.login-error{color:#b71c1c;font-size:12px;margin-top:8px;min-height:16px}
+.app{min-height:100vh}.topbar{background:#102433;color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 8px 24px rgba(15,23,42,.18)}
+.brand{font-weight:bold;letter-spacing:.8px;margin-right:8px}.topbar a{color:#fff;text-decoration:none;font-size:12.5px;font-weight:bold;background:rgba(255,255,255,.1);padding:7px 11px;border-radius:4px}.topbar a.active{background:#d6b767;color:#102433}
+.status{margin-left:auto;color:#dce7ef;font-size:12.5px}.logout{border:0;background:#263d4d;color:#fff;padding:7px 11px;border-radius:4px;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 18px 40px}
+.hero{background:#fff;border:1px solid #c6d1da;border-left:6px solid #16738a;padding:22px;box-shadow:0 14px 34px rgba(15,23,42,.08);margin-bottom:18px}
+.hero h1{font-size:28px;letter-spacing:.5px;margin-bottom:6px;color:#102433}.hero p{color:#526371;line-height:1.5}
+.quick{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.tile{background:#fff;border:1px solid #c6d1da;padding:16px;text-decoration:none;color:#102433;min-height:128px;box-shadow:0 10px 28px rgba(15,23,42,.06)}
+.tile strong{display:block;font-size:17px;margin-bottom:8px}.tile span{display:block;color:#596b78;line-height:1.4}.tile b{display:inline-block;margin-top:14px;color:#16738a}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}.stat{background:#102433;color:#fff;padding:16px;border:1px solid #243d4e}
+.stat label{display:block;color:#b8c6cf;font-size:11px;font-weight:bold;text-transform:uppercase;margin-bottom:8px}.stat div{font-size:24px;font-weight:bold}
+.panel{background:#fff;border:1px solid #c6d1da;padding:16px;box-shadow:0 10px 28px rgba(15,23,42,.06);overflow-x:auto}
+.panel h2{font-size:18px;margin-bottom:12px;color:#102433}.recent{width:100%;border-collapse:collapse}.recent th{background:#223542;color:#fff;text-align:left;padding:9px;font-size:12px}.recent td{border:1px solid #d8e1e7;padding:9px;font-size:13px}.recent tr:nth-child(even) td{background:#f7fafc}.amt{text-align:right;font-weight:bold}
+@media(max-width:850px){.quick,.stats{grid-template-columns:1fr 1fr}.status{margin-left:0;width:100%}}@media(max-width:560px){.quick,.stats{grid-template-columns:1fr}.topbar{display:grid;grid-template-columns:1fr 1fr}.brand,.status,.logout{grid-column:1/-1}.topbar a,.logout{text-align:center}.hero h1{font-size:23px}.recent{min-width:560px}}
+</style>
+</head>
+<body class="logged-out">
+<div class="login-screen">
+  <form class="login-box" onsubmit="login(event)">
+    <h1>SHREE BALAJI</h1>
+    <label>USERNAME</label><input id="login-user" type="text" autocomplete="username" value="ShreeBalaji">
+    <label>PASSWORD</label><input id="login-pass" type="password" autocomplete="current-password" value="ShreeBalaji">
+    <button type="submit">LOGIN</button><div class="login-error" id="login-error"></div>
+  </form>
+</div>
+<main class="app">
+  <nav class="topbar">
+    <div class="brand">SHREE BALAJI</div>
+    <a class="active" href="dashboard.html">DASHBOARD</a>
+    <a href="index.html">PREVIEW</a>
+    <a href="invoice-entry.html">ENTRY</a>
+    <a href="master.html">PARTIES</a>
+    <a href="payments.html">PAYMENTS</a>
+    <a href="report.html">REPORTS</a>
+    <div class="status" id="db-status">Ready</div>
+    <button class="logout" onclick="logout()">LOGOUT</button>
+  </nav>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Business Command Center</h1>
+      <p>Create invoices, manage parties, track receivables, export PDFs, and review recent business activity from one place.</p>
+    </section>
+    <section class="quick">
+      <a class="tile" href="invoice-entry.html"><strong>Invoice Entry</strong><span>Create GST invoices, save parties, print A4 PDFs, and export invoice ZIPs.</span><b>Open Entry</b></a>
+      <a class="tile" href="master.html"><strong>Party Master</strong><span>Save customer GSTIN, PAN, mobile, address, and place of supply.</span><b>Manage Parties</b></a>
+      <a class="tile" href="payments.html"><strong>Payments</strong><span>Load invoices, record received amount, and watch balances due.</span><b>Track Payments</b></a>
+      <a class="tile" href="report.html"><strong>Reports</strong><span>Filter invoices by party, month, amount, and print business reports.</span><b>View Reports</b></a>
+    </section>
+    <section class="stats">
+      <div class="stat"><label>Recent Invoices</label><div id="stat-count">0</div></div>
+      <div class="stat"><label>Taxable Value</label><div id="stat-taxable">₹ 0</div></div>
+      <div class="stat"><label>Gross Value</label><div id="stat-total">₹ 0</div></div>
+      <div class="stat"><label>Balance Due</label><div id="stat-due">₹ 0</div></div>
+    </section>
+    <section class="panel">
+      <h2>Recent Invoices</h2>
+      <table class="recent">
+        <thead><tr><th>Invoice</th><th>Date</th><th>Party</th><th class="amt">Total</th><th class="amt">Due</th></tr></thead>
+        <tbody id="recent-body"><tr><td colspan="5">Loading...</td></tr></tbody>
+      </table>
+    </section>
+  </div>
+</main>
+<script>
+const API_URL='https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';
+const LOGIN_USER='ShreeBalaji';const LOGIN_PASS='ShreeBalaji';
+function getAuth(){return{username:sessionStorage.getItem('sb_user')||'',password:sessionStorage.getItem('sb_pass')||''}}
+function fmt(n){return Math.round(n||0).toLocaleString('en-IN')}
+function parseMoney(v){return parseFloat(String(v||'').replace(/[^0-9.-]/g,''))||0}
+function applyLoginState(){const a=getAuth();const ok=a.username===LOGIN_USER&&a.password===LOGIN_PASS;document.body.className=ok?'logged-in':'logged-out';if(ok)loadDashboard()}
+function login(e){e.preventDefault();const u=document.getElementById('login-user').value.trim();const p=document.getElementById('login-pass').value;if(u!==LOGIN_USER||p!==LOGIN_PASS){document.getElementById('login-error').textContent='Invalid username or password';return}sessionStorage.setItem('sb_user',u);sessionStorage.setItem('sb_pass',p);applyLoginState()}
+function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
+async function api(action,payload={}){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...getAuth(),...payload})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Request failed');return data}
+function invoiceTotals(data){let taxable=0;(data.items||[]).forEach(it=>{let amt=parseMoney(it.amt);if(!amt&&it.qty&&it.rate)amt=parseMoney(it.qty)*parseMoney(it.rate);taxable+=amt});const rate=parseMoney(data.invoice?.gstRate||18);const total=Math.round(taxable+(taxable*rate/100));const received=parseMoney(data.invoice?.receivedAmount||data.payment?.receivedAmount);return{taxable,total,due:Math.max(total-received,0)}}
+async function loadDashboard(){const status=document.getElementById('db-status');status.textContent='Loading list...';try{const list=await SBDataCache.listInvoices(api);const rows=list.rows||[];const recent=rows.slice(0,12);const body=document.getElementById('recent-body');body.innerHTML='';document.getElementById('stat-count').textContent=rows.length;document.getElementById('stat-taxable').textContent='-';document.getElementById('stat-total').textContent='-';document.getElementById('stat-due').textContent='-';for(const row of recent){const tr=document.createElement('tr');tr.dataset.invoiceNo=row.invoice_no;tr.innerHTML=`<td><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">${escapeHtml(row.invoice_no)}</a></td><td>${escapeHtml(row.invoice_date||'')}</td><td>${escapeHtml(row.party_name||'')}</td><td class="amt">...</td><td class="amt">...</td>`;body.appendChild(tr)}if(!rows.length){body.innerHTML='<tr><td colspan="5">No invoices found.</td></tr>';status.textContent='Ready';return}status.textContent='Ready';hydrateDashboardTotals(recent)}catch(e){console.error(e);status.textContent='Error';document.getElementById('recent-body').innerHTML='<tr><td colspan="5">Could not load dashboard.</td></tr>'}}
+async function hydrateDashboardTotals(rows){const status=document.getElementById('db-status');let taxable=0,total=0,due=0,done=0;for(const row of rows){try{const full=await SBDataCache.loadInvoice(api,row.invoice_no);const data=full.data||{};const t=invoiceTotals(data);taxable+=t.taxable;total+=t.total;due+=t.due;const tr=document.querySelector(`tr[data-invoice-no="${CSS.escape(row.invoice_no)}"]`);if(tr){tr.children[1].textContent=data.invoice?.date||row.invoice_date||'';tr.children[2].textContent=data.billTo?.name||row.party_name||'';tr.children[3].textContent='₹ '+fmt(t.total);tr.children[4].textContent='₹ '+fmt(t.due)}}catch(e){console.error(e)}done++;status.textContent=`Details ${done}/${rows.length}`;document.getElementById('stat-taxable').textContent='₹ '+fmt(taxable);document.getElementById('stat-total').textContent='₹ '+fmt(total);document.getElementById('stat-due').textContent='₹ '+fmt(due)}status.textContent='Ready'}
+applyLoginState();
+</script>
+</body>
+</html>
