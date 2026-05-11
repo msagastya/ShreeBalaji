@@ -180,6 +180,7 @@ const LOGIN_USER = 'ShreeBalaji';
 const LOGIN_PASS = 'ShreeBalaji';
 
 let reportData = []; // To store all loaded invoice details
+let reportHydrateRun = 0;
 
 function getAuth(){
   return {
@@ -238,6 +239,7 @@ function parseDate(str) {
 }
 
 async function loadAllData(){
+    const run = ++reportHydrateRun;
     document.getElementById('gen-date').textContent = new Date().toLocaleString();
     const status = document.getElementById('db-status');
     SBUI.setBusy(true, 'Loading summaries...');
@@ -275,6 +277,7 @@ async function loadAllData(){
         
         SBUI.setBusy(false, 'Summary ready');
         applyFilters();
+        hydrateReportRows(run);
     } catch(e) {
         console.error(e);
         SBUI.setBusy(false, 'Error loading data');
@@ -286,31 +289,60 @@ async function loadReportInvoice(invoiceNo){
     if(!item) return;
     SBUI.setBusy(true, `Loading ${invoiceNo}...`);
     try{
-        const full = await SBDataCache.loadInvoice(api, invoiceNo);
-        const d = full.data || {};
-        let taxable = 0;
-        (d.items || []).forEach(it => {
-            let rowAmt = parseFloat(String(it.amt || 0).replace(/,/g,''));
-            if(!rowAmt && it.qty && it.rate) rowAmt = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
-            taxable += rowAmt;
-        });
-        Object.assign(item, {
-            date: d.invoice?.date || item.date,
-            dateObj: parseDate(d.invoice?.date || item.date),
-            no: d.invoice?.no || item.no,
-            party: d.billTo?.name || item.party,
-            taxable,
-            gst: taxable * 0.18,
-            total: taxable * 1.18,
-            loaded: true,
-            details: d.billTo || item.details
-        });
+        await hydrateReportItem(item);
         applyFilters();
         SBUI.setBusy(false, 'Detail loaded');
     }catch(e){
         console.error(e);
         SBUI.setBusy(false, 'Detail failed');
     }
+}
+
+async function hydrateReportItem(item){
+    if(item.loaded) return item;
+    item.loading = true;
+    const full = await SBDataCache.loadInvoice(api, item.no);
+    const d = full.data || {};
+    let taxable = 0;
+    (d.items || []).forEach(it => {
+        let rowAmt = parseFloat(String(it.amt || 0).replace(/,/g,''));
+        if(!rowAmt && it.qty && it.rate) rowAmt = (parseFloat(it.qty) || 0) * (parseFloat(it.rate) || 0);
+        taxable += rowAmt;
+    });
+    Object.assign(item, {
+        date: d.invoice?.date || item.date,
+        dateObj: parseDate(d.invoice?.date || item.date),
+        no: d.invoice?.no || item.no,
+        party: d.billTo?.name || item.party,
+        taxable,
+        gst: taxable * 0.18,
+        total: taxable * 1.18,
+        loaded: true,
+        loading: false,
+        details: d.billTo || item.details
+    });
+    return item;
+}
+
+async function hydrateReportRows(run){
+    let done = 0;
+    for(const item of reportData){
+        if(run !== reportHydrateRun) return;
+        if(item.loaded) continue;
+        try{
+            item.loading = true;
+            applyFilters();
+            await hydrateReportItem(item);
+        }catch(e){
+            console.error(e);
+            item.loading = false;
+        }
+        done++;
+        applyFilters();
+        SBUI.setBusy(true, `Reports ${done}/${reportData.length}`);
+        await new Promise(r => setTimeout(r, 20));
+    }
+    SBUI.setBusy(false, 'Data ready');
 }
 
 function applyFilters() {
@@ -357,10 +389,10 @@ function renderTables(data) {
             <td>${escapeHtml(d.date)}</td>
             <td>${escapeHtml(d.no)}</td>
             <td>${escapeHtml(d.party)}</td>
-            <td class="amt">${d.loaded ? fmt(d.taxable) : '-'}</td>
-            <td class="amt">${d.loaded ? fmt(d.gst) : '-'}</td>
-            <td class="amt">${d.loaded ? fmt(d.total) : '-'}</td>
-            <td>${d.loaded ? 'Loaded' : `<button class="print-report" onclick="loadReportInvoice(${JSON.stringify(d.no)})">LOAD</button>`}</td>
+            <td class="amt">${d.loaded ? fmt(d.taxable) : '<span class="skeleton">Loading</span>'}</td>
+            <td class="amt">${d.loaded ? fmt(d.gst) : '<span class="skeleton">Loading</span>'}</td>
+            <td class="amt">${d.loaded ? fmt(d.total) : '<span class="skeleton">Loading</span>'}</td>
+            <td>${d.loaded ? 'Loaded' : (d.loading ? 'Calculating...' : `<button class="print-report" onclick="loadReportInvoice(${JSON.stringify(d.no)})">LOAD</button>`)}</td>
         `;
         invTable.appendChild(tr);
         
