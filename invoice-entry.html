@@ -1081,6 +1081,7 @@ const PREFILLED = [
 let rowCount = 0;
 const IS_ENTRY_PAGE = document.body.classList.contains('entry-page');
 let isPopulatingEntry = false;
+let currentInvoiceData = null;
 const entryPartyCache = new Map();
 const pendingInvoiceFromUrl = new URLSearchParams(window.location.search).get('invoice') || '';
 
@@ -1289,6 +1290,12 @@ async function exportZipRange() {
 
   const zip = new JSZip();
   const folder = zip.folder("Invoices");
+  const copyMode = prompt("Copy type: current, bill, or paid", "current");
+  if(!copyMode || !['current','bill','paid'].includes(copyMode.trim().toLowerCase())){
+    alert("Invalid copy type. Use current, bill, or paid.");
+    return;
+  }
+  const normalizedCopyMode = copyMode.trim().toLowerCase();
   setDbStatus(`Preparing ZIP (${range})...`);
 
   try {
@@ -1302,17 +1309,14 @@ async function exportZipRange() {
         continue;
       }
 
-      applyInvoice(result.data);
-      
-      // 2. Apply export-mode to body to mirror individual print styles exactly
-      document.body.classList.add('export-mode');
-      const element = document.querySelector('.inv');
+      const element = prepareInvoiceExportElement(result.data, normalizedCopyMode);
 
       await new Promise(r => setTimeout(r, 160));
 
+      const fileBase = invoiceFileBase(invNo);
       const opt = {
-        margin: [8, 8, 8, 8],
-        filename: `INV2627${String(i).padStart(3, '0')}.pdf`,
+        margin: [0, 0, 0, 0],
+        filename: `ShreeBalaji - ${fileBase}.pdf`,
         pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
         image: { type: 'jpeg', quality: 1 },
         html2canvas: { 
@@ -1329,24 +1333,69 @@ async function exportZipRange() {
 
       const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
       folder.file(opt.filename, pdfBlob);
-
-      document.body.classList.remove('export-mode');
     }
 
     setDbStatus("Zipping...");
     const content = await zip.generateAsync({ type: "blob" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(content);
-    link.download = `Invoices_${range}.zip`;
+    link.download = `ShreeBalaji Invoices ${range}.zip`;
     link.click();
     setDbStatus("Export Complete");
   } catch (error) {
     console.error(error);
     setDbStatus("Export failed");
     alert("Export failed: " + error.message);
-  } finally {
-    document.body.classList.remove('export-mode');
   }
+}
+
+function invoiceFileBase(invoiceNo){
+  return String(invoiceNo || field('inv-no') || 'Invoice').replace(/[^A-Za-z0-9]/g, '');
+}
+
+function invoiceCopyReceivedAmount(data, mode){
+  if(mode === 'bill') return data?.billingOriginal?.receivedAmount ?? data?.invoice?.receivedAmount ?? '0';
+  if(mode === 'paid') return parseMoney(document.getElementById('sum-total').textContent).toFixed(2);
+  return data?.invoice?.receivedAmount ?? '0';
+}
+
+function applyInvoiceCopyMode(data, mode){
+  if(!data) return;
+  document.getElementById('rcvd-amt').value = invoiceCopyReceivedAmount(data, mode || 'current');
+  updateTotals();
+}
+
+function prepareInvoiceExportElement(data, mode){
+  applyInvoice(data);
+  applyInvoiceCopyMode(data, mode);
+  const clone = document.querySelector('.inv').cloneNode(true);
+  clone.classList.add('export-mode');
+  clone.querySelectorAll('.no-print,.del-cell,.del-btn').forEach(el => el.remove());
+  clone.querySelectorAll('#items-body tr').forEach(tr => {
+    const hasValue = ['date','party','lr','bill','qty','rate','amt'].some(role => {
+      const input = tr.querySelector(`input[data-role="${role}"]`);
+      return String(input?.value || '').trim();
+    });
+    if(!hasValue) tr.remove();
+  });
+  clone.querySelectorAll('input').forEach(input => {
+    const span = document.createElement('span');
+    span.className = 'export-text';
+    span.textContent = input.value || '';
+    input.replaceWith(span);
+  });
+  clone.querySelectorAll('[contenteditable]').forEach(el => {
+    el.removeAttribute('contenteditable');
+    el.removeAttribute('data-placeholder');
+  });
+  clone.style.width = '210mm';
+  clone.style.minHeight = '297mm';
+  clone.style.height = '297mm';
+  clone.style.margin = '0';
+  clone.style.boxShadow = 'none';
+  clone.style.border = '0';
+  clone.style.background = '#fff';
+  return clone;
 }
 
 // ─── DELETE ROW ───
@@ -1394,6 +1443,10 @@ function editableText(id){
 function rowValue(tr, role){
   const input = tr.querySelector(`[data-role="${role}"]`);
   return input ? input.value.trim() : '';
+}
+
+function hasInvoiceItemValue(item){
+  return ['date','party','lr','bill','qty','rate','amt'].some(key => String(item[key] || '').trim());
 }
 
 function entryField(id){
@@ -1720,6 +1773,7 @@ function previewEntryInvoice(){
 
 function collectInvoice(){
   return {
+    billingOriginal: currentInvoiceData?.billingOriginal,
     invoice: {
       no: field('inv-no'),
       date: field('inv-date'),
@@ -1760,12 +1814,13 @@ function collectInvoice(){
       unit: rowValue(tr, 'unit'),
       rate: rowValue(tr, 'rate').replace(/,/g, ''),
       amt: rowValue(tr, 'amt').replace(/,/g, '')
-    }))
+    })).filter(hasInvoiceItemValue)
   };
 }
 
 function applyInvoice(data){
   if(!data) return;
+  currentInvoiceData = JSON.parse(JSON.stringify(data));
   document.getElementById('inv-no').value = data.invoice?.no || '';
   document.getElementById('inv-date').value = data.invoice?.date || '';
   document.getElementById('inv-pos').value = data.invoice?.placeOfSupply || '';

@@ -118,6 +118,13 @@ async function invoiceExists(invoiceNo: string) {
   return rows.length > 0;
 }
 
+async function loadInvoiceData(invoiceNo: string) {
+  const r = await rest(`invoices?select=data&invoice_no=eq.${encodeURIComponent(invoiceNo)}&limit=1`);
+  if (!r.ok) return null;
+  const rows = await r.json();
+  return rows[0]?.data || null;
+}
+
 async function partyExists(name: string) {
   const r = await rest(`master?select=name&type=eq.party&name=eq.${encodeURIComponent(name)}&limit=1`);
   if (!r.ok) return false;
@@ -176,6 +183,11 @@ Deno.serve(async (req) => {
       const validationErrors = invoiceValidationErrors(data);
       if (validationErrors.length) return json({ error: validationErrors.join(' ') }, 400);
       const existed = await invoiceExists(data.invoice.no);
+      const existingData = existed ? await loadInvoiceData(data.invoice.no) : null;
+      data.billingOriginal = existingData?.billingOriginal || data.billingOriginal || {
+        receivedAmount: String(existingData?.invoice?.receivedAmount ?? data.invoice?.receivedAmount ?? '0'),
+        capturedAt: existingData?.billingOriginal?.capturedAt || new Date().toISOString(),
+      };
       const totals = invoiceTotals(data);
       const payload = {
         invoice_no: data.invoice.no,
