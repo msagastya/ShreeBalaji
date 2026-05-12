@@ -28,7 +28,9 @@ body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;fon
 .stat label{display:block;color:#b8c6cf;font-size:11px;font-weight:bold;text-transform:uppercase;margin-bottom:8px}.stat div{font-size:24px;font-weight:bold}
 .panel{background:#fff;border:1px solid #c6d1da;padding:16px;box-shadow:0 10px 28px rgba(15,23,42,.06);overflow-x:auto}
 .panel h2{font-size:18px;margin-bottom:12px;color:#102433}.recent{width:100%;border-collapse:collapse}.recent th{background:#223542;color:#fff;text-align:left;padding:9px;font-size:12px}.recent td{border:1px solid #d8e1e7;padding:9px;font-size:13px}.recent tr:nth-child(even) td{background:#f7fafc}.amt{text-align:right;font-weight:bold}
+.panel-grid{display:grid;grid-template-columns:1.15fr .85fr;gap:18px;margin-top:18px}.op-actions{display:flex;gap:10px;flex-wrap:wrap}.op-actions button{border:0;background:#263d4d;color:#fff;padding:9px 12px;border-radius:4px;font-weight:bold;cursor:pointer}.health{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.health div{background:#f5f9fb;border:1px solid #d8e1e7;padding:12px}.health label{display:block;font-size:10.5px;text-transform:uppercase;font-weight:bold;color:#596b78;margin-bottom:6px}.health strong{font-size:16px;color:#102433}.activity-list{display:grid;gap:8px}.activity{border:1px solid #d8e1e7;background:#f8fbfd;padding:10px}.activity strong{display:block;color:#102433}.activity span{display:block;color:#596b78;font-size:12px;margin-top:4px}
 @media(max-width:850px){.quick,.stats{grid-template-columns:1fr 1fr}.status{margin-left:0;width:100%}}@media(max-width:560px){.quick,.stats{grid-template-columns:1fr}.topbar{display:grid;grid-template-columns:1fr 1fr}.brand,.status,.logout{grid-column:1/-1}.topbar a,.logout{text-align:center}.hero h1{font-size:23px}.recent{min-width:560px}}
+@media(max-width:850px){.panel-grid{grid-template-columns:1fr}.health{grid-template-columns:1fr 1fr}}@media(max-width:560px){.health{grid-template-columns:1fr}}
 </style>
 </head>
 <body class="logged-out">
@@ -83,10 +85,25 @@ body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;fon
         <tbody id="party-exposure"><tr><td colspan="4">Loading...</td></tr></tbody>
       </table>
     </section>
+    <section class="panel-grid">
+      <div class="panel">
+        <h2>Recent Activity</h2>
+        <div class="activity-list" id="activity-list"><div class="activity">Loading activity...</div></div>
+      </div>
+      <div class="panel">
+        <h2>System Health</h2>
+        <div class="health" id="health-panel">
+          <div><label>Status</label><strong>Checking...</strong></div>
+        </div>
+      </div>
+    </section>
     <section class="panel" style="margin-top:18px">
       <h2>Data Operations</h2>
-      <button class="logout" onclick="exportBackup()">EXPORT JSON BACKUP</button>
-      <button class="logout" onclick="exportDashboardCsv()">EXPORT INVOICE CSV</button>
+      <div class="op-actions">
+        <button onclick="exportBackup()">EXPORT JSON BACKUP</button>
+        <button onclick="exportDashboardCsv()">EXPORT INVOICE CSV</button>
+        <button onclick="refreshAll()">REFRESH LIVE DATA</button>
+      </div>
     </section>
   </div>
 </main>
@@ -101,10 +118,13 @@ function login(e){e.preventDefault();const u=document.getElementById('login-user
 function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
 async function api(action,payload={}){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...getAuth(),...payload})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Request failed');return data}
 let dashboardRows=[];
-async function loadDashboard(){SBUI.setBusy(true,'Loading business summary...');try{const list=await SBDataCache.invoiceSummaries(api);const rows=list.rows||[];dashboardRows=rows;const recent=rows.slice(0,12);const body=document.getElementById('recent-body');body.innerHTML='';document.getElementById('stat-count').textContent=list.count||rows.length;document.getElementById('stat-total').textContent='₹ '+fmt(list.grand?.total||0);document.getElementById('stat-due').textContent='₹ '+fmt(list.grand?.due||0);document.getElementById('stat-parties').textContent=list.parties||new Set(rows.map(r=>r.party_name).filter(Boolean)).size;for(const row of recent){const tr=document.createElement('tr');tr.innerHTML=`<td><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">${escapeHtml(row.invoice_no)}</a></td><td>${escapeHtml(row.invoice_date||'')}</td><td>${escapeHtml(row.party_name||'')}</td><td class="amt">₹ ${fmt(row.total)}</td><td class="amt">₹ ${fmt(row.due)}</td><td>${escapeHtml(row.status||'')}</td>`;body.appendChild(tr)}if(!rows.length)body.innerHTML='<tr><td colspan="6">No invoices found.</td></tr>';renderPartyExposure(rows);SBUI.setBusy(false,'Ready')}catch(e){console.error(e);SBUI.setBusy(false,'Error');document.getElementById('recent-body').innerHTML='<tr><td colspan="6">Could not load dashboard.</td></tr>'}}
+async function loadDashboard(){SBUI.setBusy(true,'Loading business summary...');try{const list=await SBDataCache.invoiceSummaries(api);const rows=list.rows||[];dashboardRows=rows;const recent=rows.slice(0,12);const body=document.getElementById('recent-body');body.innerHTML='';document.getElementById('stat-count').textContent=list.count||rows.length;document.getElementById('stat-total').textContent='₹ '+fmt(list.grand?.total||0);document.getElementById('stat-due').textContent='₹ '+fmt(list.grand?.due||0);document.getElementById('stat-parties').textContent=list.parties||new Set(rows.map(r=>r.party_name).filter(Boolean)).size;for(const row of recent){const tr=document.createElement('tr');tr.innerHTML=`<td><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">${escapeHtml(row.invoice_no)}</a></td><td>${escapeHtml(row.invoice_date||'')}</td><td>${escapeHtml(row.party_name||'')}</td><td class="amt">₹ ${fmt(row.total)}</td><td class="amt">₹ ${fmt(row.due)}</td><td>${escapeHtml(row.status||'')}</td>`;body.appendChild(tr)}if(!rows.length)body.innerHTML='<tr><td colspan="6">No invoices found.</td></tr>';renderPartyExposure(rows);await Promise.all([loadActivity(),loadHealth()]);SBUI.setBusy(false,'Ready')}catch(e){console.error(e);SBUI.setBusy(false,'Error');document.getElementById('recent-body').innerHTML='<tr><td colspan="6">Could not load dashboard.</td></tr>'}}
 function renderPartyExposure(rows){const map=new Map();rows.forEach(row=>{const key=row.party_name||'Unknown';const item=map.get(key)||{party:key,count:0,total:0,due:0};item.count++;item.total+=Number(row.total)||0;item.due+=Number(row.due)||0;map.set(key,item)});const body=document.getElementById('party-exposure');body.innerHTML='';[...map.values()].sort((a,b)=>b.due-a.due).slice(0,10).forEach(row=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${escapeHtml(row.party)}</td><td class="amt">${row.count}</td><td class="amt">₹ ${fmt(row.total)}</td><td class="amt">₹ ${fmt(row.due)}</td>`;body.appendChild(tr)});if(!body.children.length)body.innerHTML='<tr><td colspan="4">No party exposure found.</td></tr>'}
+async function loadActivity(){try{const data=await SBDataCache.listAudit(api);const box=document.getElementById('activity-list');box.innerHTML='';(data.rows||[]).slice(0,8).forEach(row=>{const d=row.details||{};const div=document.createElement('div');div.className='activity';div.innerHTML=`<strong>${escapeHtml(String(d.action||'activity').replaceAll('.',' '))}</strong><span>${escapeHtml(d.target||'')} • ${escapeHtml(new Date(d.at||row.updated_at||Date.now()).toLocaleString())}</span>`;box.appendChild(div)});if(!box.children.length)box.innerHTML='<div class="activity">No activity recorded yet. New saves will appear here.</div>'}catch(e){console.error(e);document.getElementById('activity-list').innerHTML='<div class="activity">Could not load activity.</div>'}}
+async function loadHealth(){try{const h=await SBDataCache.systemHealth(api);document.getElementById('health-panel').innerHTML=`<div><label>Status</label><strong>${h.ok?'Online':'Issue'}</strong></div><div><label>Checked</label><strong>${escapeHtml(new Date(h.checked_at).toLocaleTimeString())}</strong></div><div><label>Invoices</label><strong>${h.invoice_count||0}</strong></div><div><label>Parties</label><strong>${h.party_count||0}</strong></div><div><label>Recent Audit</label><strong>${h.latest_audit_at?escapeHtml(new Date(h.latest_audit_at).toLocaleDateString()):'None'}</strong></div><div><label>Cache</label><strong>2 min</strong></div>`}catch(e){console.error(e);document.getElementById('health-panel').innerHTML='<div><label>Status</label><strong>Check failed</strong></div>'}}
 async function exportBackup(){SBUI.setBusy(true,'Preparing backup...');try{const data=await SBDataCache.backupData(api,{force:true});downloadTextFile(`shree-balaji-backup-${new Date().toISOString().slice(0,10)}.json`,JSON.stringify(data,null,2),'application/json');SBUI.setBusy(false,'Backup exported')}catch(e){console.error(e);SBUI.setBusy(false,'Backup failed');alert(e.message)}}
 function exportDashboardCsv(){const lines=[['Invoice','Date','Party','Taxable','GST','Total','Received','Due','Status'].map(csvCell).join(',')];dashboardRows.forEach(row=>lines.push([row.invoice_no,row.invoice_date,row.party_name,row.taxable,row.gst,row.total,row.received,row.due,row.status].map(csvCell).join(',')));downloadTextFile(`shree-balaji-invoices-${new Date().toISOString().slice(0,10)}.csv`,lines.join('\n'),'text/csv')}
+async function refreshAll(){SBDataCache.clearAll();await loadDashboard()}
 applyLoginState();
 </script>
 </body>

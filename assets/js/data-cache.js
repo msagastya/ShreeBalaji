@@ -63,6 +63,12 @@
     backupData(api, options){
       return cached(key(['backupData']), LIST_TTL, () => api('backupData'), options);
     },
+    listAudit(api, options){
+      return cached(key(['listAudit']), LIST_TTL, () => api('listAudit'), options);
+    },
+    systemHealth(api, options){
+      return cached(key(['systemHealth']), LIST_TTL, () => api('systemHealth'), options);
+    },
     loadInvoice(api, invoiceNo, options){
       return cached(key(['loadInvoice', invoiceNo]), DETAIL_TTL, () => api('loadInvoice', { invoiceNo }), options);
     },
@@ -77,10 +83,15 @@
       localStorage.removeItem(key(['reportSummary']));
       localStorage.removeItem(key(['listParties']));
       localStorage.removeItem(key(['backupData']));
+      localStorage.removeItem(key(['listAudit']));
+      localStorage.removeItem(key(['systemHealth']));
     },
     invalidateParty(name){
       if(name) localStorage.removeItem(key(['loadParty', name]));
       localStorage.removeItem(key(['listParties']));
+      localStorage.removeItem(key(['backupData']));
+      localStorage.removeItem(key(['listAudit']));
+      localStorage.removeItem(key(['systemHealth']));
     },
     clearAll(){
       removeByPrefix(PREFIX);

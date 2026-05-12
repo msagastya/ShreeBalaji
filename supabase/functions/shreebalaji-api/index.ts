@@ -101,8 +101,55 @@ function invoiceSummary(row: any) {
   };
 }
 
+function safeText(value: unknown, fallback = '') {
+  return String(value ?? fallback).trim().slice(0, 240);
+}
+
 async function invoiceRows(limit = 500) {
   const r = await rest(`invoices?select=invoice_no,party_name,invoice_date,updated_at,data&order=updated_at.desc&limit=${limit}`);
+  if (!r.ok) throw new Error(await r.text());
+  return await r.json();
+}
+
+async function invoiceExists(invoiceNo: string) {
+  const r = await rest(`invoices?select=invoice_no&invoice_no=eq.${encodeURIComponent(invoiceNo)}&limit=1`);
+  if (!r.ok) return false;
+  const rows = await r.json();
+  return rows.length > 0;
+}
+
+async function partyExists(name: string) {
+  const r = await rest(`master?select=name&type=eq.party&name=eq.${encodeURIComponent(name)}&limit=1`);
+  if (!r.ok) return false;
+  const rows = await r.json();
+  return rows.length > 0;
+}
+
+async function auditEvent(action: string, target: string, details: Record<string, unknown> = {}) {
+  try {
+    const at = new Date().toISOString();
+    const payload = {
+      type: 'audit',
+      name: `${at}-${crypto.randomUUID()}`,
+      details: {
+        at,
+        action,
+        target: safeText(target),
+        ...details,
+      },
+    };
+    await rest('master', {
+      method: 'POST',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify(payload),
+    });
+  } catch (error) {
+    console.error('Audit log failed', error);
+  }
+}
+
+async function auditRows(limit = 50) {
+  const r = await rest(`master?select=name,details,updated_at&type=eq.audit&order=updated_at.desc&limit=${limit}`);
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
 }
@@ -128,6 +175,8 @@ Deno.serve(async (req) => {
       if (!data?.invoice?.no) return json({ error: 'Invoice number required' }, 400);
       const validationErrors = invoiceValidationErrors(data);
       if (validationErrors.length) return json({ error: validationErrors.join(' ') }, 400);
+      const existed = await invoiceExists(data.invoice.no);
+      const totals = invoiceTotals(data);
       const payload = {
         invoice_no: data.invoice.no,
         party_name: data.billTo?.name || null,
@@ -140,7 +189,14 @@ Deno.serve(async (req) => {
         body: JSON.stringify(payload),
       });
       if (!r.ok) return json({ error: await r.text() }, r.status);
-      return json({ ok: true, invoice: await r.json() });
+      const saved = await r.json();
+      await auditEvent(existed ? 'invoice.updated' : 'invoice.created', data.invoice.no, {
+        party: safeText(data.billTo?.name),
+        total: totals.total,
+        due: totals.due,
+        status: totals.status,
+      });
+      return json({ ok: true, invoice: saved });
     }
 
     if (body.action === 'loadInvoice') {
@@ -196,14 +252,43 @@ Deno.serve(async (req) => {
       const partiesResponse = await rest('master?select=name,details,updated_at&type=eq.party&order=name.asc&limit=500');
       if (!partiesResponse.ok) return json({ error: await partiesResponse.text() }, partiesResponse.status);
       const parties = await partiesResponse.json();
+      const audits = await auditRows(100);
       return json({
         exported_at: new Date().toISOString(),
         app: 'Shree Balaji Tempo Services',
         version: 1,
         invoice_count: invoices.length,
         party_count: parties.length,
+        audit_count: audits.length,
         invoices,
         parties,
+        audits,
+      });
+    }
+
+    if (body.action === 'listAudit') {
+      const limit = Math.min(Number(body.limit) || 50, 100);
+      return json({ rows: await auditRows(limit) });
+    }
+
+    if (body.action === 'systemHealth') {
+      const invoices = await invoiceRows(500);
+      const partiesResponse = await rest('master?select=name,updated_at&type=eq.party&order=updated_at.desc&limit=500');
+      if (!partiesResponse.ok) return json({ error: await partiesResponse.text() }, partiesResponse.status);
+      const parties = await partiesResponse.json();
+      const audits = await auditRows(20);
+      const latestInvoice = invoices[0]?.updated_at || null;
+      const latestParty = parties[0]?.updated_at || null;
+      const latestAudit = audits[0]?.updated_at || audits[0]?.details?.at || null;
+      return json({
+        ok: true,
+        checked_at: new Date().toISOString(),
+        invoice_count: invoices.length,
+        party_count: parties.length,
+        audit_count: audits.length,
+        latest_invoice_at: latestInvoice,
+        latest_party_at: latestParty,
+        latest_audit_at: latestAudit,
       });
     }
 
@@ -212,6 +297,7 @@ Deno.serve(async (req) => {
       if (!name) return json({ error: 'Party name required' }, 400);
       if (!validGstin(body.details?.gstin)) return json({ error: 'GSTIN format is invalid.' }, 400);
       if (!validPan(body.details?.pan)) return json({ error: 'PAN format is invalid.' }, 400);
+      const existed = await partyExists(name);
       const payload = { type: 'party', name, details: body.details || {} };
       const r = await rest('master?on_conflict=type,name', {
         method: 'POST',
@@ -219,7 +305,12 @@ Deno.serve(async (req) => {
         body: JSON.stringify(payload),
       });
       if (!r.ok) return json({ error: await r.text() }, r.status);
-      return json({ ok: true, party: await r.json() });
+      const saved = await r.json();
+      await auditEvent(existed ? 'party.updated' : 'party.created', name, {
+        gstin: safeText(body.details?.gstin),
+        mobile: safeText(body.details?.mobile),
+      });
+      return json({ ok: true, party: saved });
     }
 
     if (body.action === 'loadParty') {

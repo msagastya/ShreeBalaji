@@ -132,7 +132,7 @@ tr:nth-child(even){background:#fafafa;}
 
 <div class="container">
     <h1>Shree Balaji Tempo Services</h1>
-    <div class="rpt-info">Business Data Summary Report — As of 30/04/2026</div>
+    <div class="rpt-info">Business Data Summary Report — As of <span id="as-of-date"></span></div>
 
     <!-- PART 1: PARTY DIRECTORY -->
     <div id="section-parties">
@@ -250,6 +250,7 @@ function parseDate(str) {
 async function loadAllData(){
     const run = ++reportHydrateRun;
     document.getElementById('gen-date').textContent = new Date().toLocaleString();
+    document.getElementById('as-of-date').textContent = new Date().toLocaleDateString();
     const status = document.getElementById('db-status');
     SBUI.setBusy(true, 'Loading summaries...');
     
