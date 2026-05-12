@@ -191,6 +191,22 @@ Deno.serve(async (req) => {
       return json({ rows: [...byName.values()].sort((a, b) => String(a.name).localeCompare(String(b.name))) });
     }
 
+    if (body.action === 'backupData') {
+      const invoices = await invoiceRows(500);
+      const partiesResponse = await rest('master?select=name,details,updated_at&type=eq.party&order=name.asc&limit=500');
+      if (!partiesResponse.ok) return json({ error: await partiesResponse.text() }, partiesResponse.status);
+      const parties = await partiesResponse.json();
+      return json({
+        exported_at: new Date().toISOString(),
+        app: 'Shree Balaji Tempo Services',
+        version: 1,
+        invoice_count: invoices.length,
+        party_count: parties.length,
+        invoices,
+        parties,
+      });
+    }
+
     if (body.action === 'saveParty') {
       const name = body.name;
       if (!name) return json({ error: 'Party name required' }, 400);

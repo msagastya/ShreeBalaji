@@ -118,7 +118,16 @@ tr:nth-child(even){background:#fafafa;}
             <option value="amt-low">Amount (Low to High)</option>
         </select>
     </div>
+    <div>
+        <label>Status:</label>
+        <select id="filter-status" onchange="applyFilters()">
+            <option value="">All</option>
+            <option value="due">Due Only</option>
+            <option value="paid">Paid Only</option>
+        </select>
+    </div>
     <button class="print-report" onclick="window.print()">PRINT TO PDF</button>
+    <button class="print-report" onclick="exportReportCsv()">EXPORT CSV</button>
 </div>
 
 <div class="container">
@@ -260,6 +269,9 @@ async function loadAllData(){
                 taxable: row.taxable || 0,
                 gst: row.gst || 0,
                 total: row.total || 0,
+                due: row.due || 0,
+                received: row.received || 0,
+                status: row.status || '',
                 loaded: true,
                 details: row.bill_to || { name: row.party_name || '' }
             };
@@ -350,12 +362,14 @@ function applyFilters() {
     const invFilter = document.getElementById('filter-inv').value.toLowerCase();
     const monthFilter = document.getElementById('filter-month').value;
     const sortOrder = document.getElementById('sort-order').value;
+    const statusFilter = document.getElementById('filter-status').value;
     
     let filtered = reportData.filter(item => {
         const matchComp = !compFilter || item.party === compFilter;
         const matchInv = !invFilter || item.no.toLowerCase().includes(invFilter);
         const matchMonth = !monthFilter || (item.date && item.date.split('/')[1] === monthFilter);
-        return matchComp && matchInv && matchMonth;
+        const matchStatus = !statusFilter || (statusFilter === 'due' ? item.due > 0 : item.due <= 0);
+        return matchComp && matchInv && matchMonth && matchStatus;
     });
     
     // Sort
@@ -423,6 +437,22 @@ function renderTables(data) {
     document.getElementById('tot-taxable').textContent = fmt(gTaxable);
     document.getElementById('tot-gst').textContent = fmt(gGst);
     document.getElementById('tot-grand').textContent = fmt(gTotal);
+}
+
+function exportReportCsv(){
+    const data = reportData.filter(item => {
+        const compFilter = document.getElementById('filter-company').value;
+        const invFilter = document.getElementById('filter-inv').value.toLowerCase();
+        const monthFilter = document.getElementById('filter-month').value;
+        const statusFilter = document.getElementById('filter-status').value;
+        return (!compFilter || item.party === compFilter)
+          && (!invFilter || item.no.toLowerCase().includes(invFilter))
+          && (!monthFilter || (item.date && item.date.split('/')[1] === monthFilter))
+          && (!statusFilter || (statusFilter === 'due' ? item.due > 0 : item.due <= 0));
+    });
+    const lines = [['Date','Invoice','Party','Taxable','GST','Total','Received','Due','Status'].map(csvCell).join(',')];
+    data.forEach(row => lines.push([row.date,row.no,row.party,row.taxable,row.gst,row.total,row.received,row.due,row.status].map(csvCell).join(',')));
+    downloadTextFile(`shree-balaji-report-${new Date().toISOString().slice(0,10)}.csv`, lines.join('\n'), 'text/csv');
 }
 
 applyLoginState();

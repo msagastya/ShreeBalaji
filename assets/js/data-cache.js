@@ -60,6 +60,9 @@
     listParties(api, options){
       return cached(key(['listParties']), LIST_TTL, () => api('listParties'), options);
     },
+    backupData(api, options){
+      return cached(key(['backupData']), LIST_TTL, () => api('backupData'), options);
+    },
     loadInvoice(api, invoiceNo, options){
       return cached(key(['loadInvoice', invoiceNo]), DETAIL_TTL, () => api('loadInvoice', { invoiceNo }), options);
     },
@@ -73,6 +76,7 @@
       localStorage.removeItem(key(['paymentLedger']));
       localStorage.removeItem(key(['reportSummary']));
       localStorage.removeItem(key(['listParties']));
+      localStorage.removeItem(key(['backupData']));
     },
     invalidateParty(name){
       if(name) localStorage.removeItem(key(['loadParty', name]));
