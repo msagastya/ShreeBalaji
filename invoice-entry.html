@@ -1807,6 +1807,11 @@ async function saveInvoice(){
     alert('Please enter an invoice number before saving.');
     return;
   }
+  const validationErrors = validateInvoiceData(data);
+  if(validationErrors.length){
+    alert('Please fix before saving:\n\n' + validationErrors.join('\n'));
+    return;
+  }
   setDbStatus('Saving...');
   try{
     await api('saveInvoice', { data });

@@ -55,6 +55,38 @@ function invoiceTotals(data: any) {
   };
 }
 
+function validGstin(value: unknown) {
+  const text = String(value || '').trim().toUpperCase();
+  return !text || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(text);
+}
+
+function validPan(value: unknown) {
+  const text = String(value || '').trim().toUpperCase();
+  return !text || /^[A-Z]{5}[0-9]{4}[A-Z]$/.test(text);
+}
+
+function invoiceValidationErrors(data: any) {
+  const errors: string[] = [];
+  const items = Array.isArray(data?.items) ? data.items : [];
+  const activeItems = items.filter((item: any) =>
+    money(item.qty) > 0 || money(item.rate) > 0 || money(item.amt) > 0 || String(item.lr || item.bill || item.desc || '').trim()
+  );
+  if (!String(data?.invoice?.no || '').trim()) errors.push('Invoice number is required.');
+  if (!String(data?.invoice?.date || '').trim()) errors.push('Invoice date is required.');
+  if (!String(data?.billTo?.name || '').trim()) errors.push('Bill To party is required.');
+  if (!validGstin(data?.billTo?.gstin)) errors.push('GSTIN format is invalid.');
+  if (!validPan(data?.billTo?.pan)) errors.push('PAN format is invalid.');
+  if (!activeItems.length) errors.push('At least one item row is required.');
+  activeItems.forEach((item: any, index: number) => {
+    const qty = money(item.qty);
+    const rate = money(item.rate);
+    const amount = money(item.amt);
+    if (qty <= 0 && amount <= 0) errors.push(`Item ${index + 1}: quantity or amount is required.`);
+    if (amount <= 0 && qty > 0 && rate <= 0) errors.push(`Item ${index + 1}: rate or amount is required.`);
+  });
+  return errors;
+}
+
 function invoiceSummary(row: any) {
   const data = row.data || {};
   const totals = invoiceTotals(data);
@@ -94,6 +126,8 @@ Deno.serve(async (req) => {
     if (body.action === 'saveInvoice') {
       const data = body.data;
       if (!data?.invoice?.no) return json({ error: 'Invoice number required' }, 400);
+      const validationErrors = invoiceValidationErrors(data);
+      if (validationErrors.length) return json({ error: validationErrors.join(' ') }, 400);
       const payload = {
         invoice_no: data.invoice.no,
         party_name: data.billTo?.name || null,
@@ -160,6 +194,8 @@ Deno.serve(async (req) => {
     if (body.action === 'saveParty') {
       const name = body.name;
       if (!name) return json({ error: 'Party name required' }, 400);
+      if (!validGstin(body.details?.gstin)) return json({ error: 'GSTIN format is invalid.' }, 400);
+      if (!validPan(body.details?.pan)) return json({ error: 'PAN format is invalid.' }, 400);
       const payload = { type: 'party', name, details: body.details || {} };
       const r = await rest('master?on_conflict=type,name', {
         method: 'POST',
