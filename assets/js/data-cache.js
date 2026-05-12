@@ -48,6 +48,18 @@
     listInvoices(api, options){
       return cached(key(['listInvoices']), LIST_TTL, () => api('listInvoices'), options);
     },
+    invoiceSummaries(api, options){
+      return cached(key(['invoiceSummaries']), LIST_TTL, () => api('invoiceSummaries'), options);
+    },
+    paymentLedger(api, options){
+      return cached(key(['paymentLedger']), LIST_TTL, () => api('paymentLedger'), options);
+    },
+    reportSummary(api, options){
+      return cached(key(['reportSummary']), LIST_TTL, () => api('reportSummary'), options);
+    },
+    listParties(api, options){
+      return cached(key(['listParties']), LIST_TTL, () => api('listParties'), options);
+    },
     loadInvoice(api, invoiceNo, options){
       return cached(key(['loadInvoice', invoiceNo]), DETAIL_TTL, () => api('loadInvoice', { invoiceNo }), options);
     },
@@ -57,9 +69,14 @@
     invalidateInvoice(invoiceNo){
       if(invoiceNo) localStorage.removeItem(key(['loadInvoice', invoiceNo]));
       localStorage.removeItem(key(['listInvoices']));
+      localStorage.removeItem(key(['invoiceSummaries']));
+      localStorage.removeItem(key(['paymentLedger']));
+      localStorage.removeItem(key(['reportSummary']));
+      localStorage.removeItem(key(['listParties']));
     },
     invalidateParty(name){
       if(name) localStorage.removeItem(key(['loadParty', name]));
+      localStorage.removeItem(key(['listParties']));
     },
     clearAll(){
       removeByPrefix(PREFIX);

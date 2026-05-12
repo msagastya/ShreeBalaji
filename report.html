@@ -245,7 +245,7 @@ async function loadAllData(){
     SBUI.setBusy(true, 'Loading summaries...');
     
     try {
-        const result = await SBDataCache.listInvoices(api);
+        const result = await SBDataCache.reportSummary(api);
         const rows = result.rows || [];
         reportData = [];
         
@@ -257,11 +257,11 @@ async function loadAllData(){
                 dateObj: parseDate(row.invoice_date),
                 no: row.invoice_no || '',
                 party: row.party_name || '',
-                taxable: 0,
-                gst: 0,
-                total: 0,
-                loaded: false,
-                details: { name: row.party_name || '' }
+                taxable: row.taxable || 0,
+                gst: row.gst || 0,
+                total: row.total || 0,
+                loaded: true,
+                details: row.bill_to || { name: row.party_name || '' }
             };
         });
         
@@ -277,7 +277,7 @@ async function loadAllData(){
         
         SBUI.setBusy(false, 'Summary ready');
         applyFilters();
-        hydrateReportRows(run);
+        void run;
     } catch(e) {
         console.error(e);
         SBUI.setBusy(false, 'Error loading data');

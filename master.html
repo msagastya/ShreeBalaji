@@ -276,22 +276,22 @@ async function loadParty(nameToLoad){
 async function fetchRecentParties(){
     SBUI.setBusy(true, 'Loading party summaries...');
     try {
-        const result = await SBDataCache.listInvoices(api);
-        const rows = result.rows || [];
-        const uniqueParties = [...new Set(rows.map(r => r.party_name))].filter(Boolean);
+        const result = await SBDataCache.listParties(api);
+        const uniqueParties = result.rows || [];
         
         const tbody = document.getElementById('party-table-body');
         tbody.innerHTML = '';
         
-        for(const name of uniqueParties) {
+        for(const party of uniqueParties) {
+            const name = party.name || '';
             const tr = document.createElement('tr');
             tr.onclick = () => loadParty(name);
             tr.innerHTML = `
                 <td><div class="mobile-label">Name</div>${escapeHtml(name)}</td>
-                <td><div class="mobile-label">Address</div>Click to load details</td>
-                <td><div class="mobile-label">GSTIN/PAN</div>-</td>
-                <td><div class="mobile-label">Mobile</div>-</td>
-                <td><div class="mobile-label">State</div>-</td>
+                <td><div class="mobile-label">Address</div>${escapeHtml(party.address || '-')}</td>
+                <td><div class="mobile-label">GSTIN/PAN</div>${escapeHtml(party.gstin || '-')} / ${escapeHtml(party.pan || '-')}</td>
+                <td><div class="mobile-label">Mobile</div>${escapeHtml(party.mobile || '-')}</td>
+                <td><div class="mobile-label">State</div>${escapeHtml(party.state || '-')}</td>
             `;
             tbody.appendChild(tr);
         }
