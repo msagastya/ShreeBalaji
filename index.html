@@ -41,7 +41,16 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16.5px;color:#222;backgrou
 .export-mode .editable:focus, .export-mode .it-input:focus { background: transparent !important; }
 .export-mode [contenteditable="true"]:empty:before { content: "" !important; }
 .export-mode.inv, .export-mode .inv { border: none !important; width: 100% !important; margin: 0 !important; background: #fff !important; }
-.export-mode table.it tr:nth-child(even) td { background: #fff !important; } /* Force clean white background */
+.export-mode .om,.export-mode .top-bar,.export-mode .co-hdr,.export-mode .ibar,.export-mode .adr-h,.export-mode .sec-h,.export-mode table.it th,.export-mode table.hs th,.export-mode .bx-h,.export-mode .txh,.export-mode tr.tt td,.export-mode tr.tb td,.export-mode table.it tr.sub td,.export-mode table.hs tr.ht td,.export-mode .amw{
+  background:#fff!important;
+  color:#000!important;
+  border-color:#000!important;
+}
+.export-mode .co-hdr{border-bottom:2px solid #000!important;}
+.export-mode .ti,.export-mode .ct,.export-mode .co-nm,.export-mode .co-ad,.export-mode .co-mt,.export-mode .adr-co,.export-mode .adr-ln,.export-mode .amw-v,.export-mode .sg-c{color:#000!important;}
+.export-mode .ob{background:#fff!important;color:#000!important;border-color:#000!important;}
+.export-mode table.it th,.export-mode table.hs th,.export-mode table.it td,.export-mode table.hs td,.export-mode table.tx td,.export-mode .adr-box,.export-mode .bx,.export-mode .amw,.export-mode .txb,.export-mode .sg{border-color:#000!important;}
+.export-mode table.it tr:nth-child(even) td { background: #fff !important; }
 
 /* ── TOOLBAR (hidden on print) ── */
 .toolbar{background:#102433;color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:sticky;top:0;z-index:100;box-shadow:0 8px 24px rgba(15,23,42,.18);}
@@ -1027,14 +1036,14 @@ async function exportZipRange() {
 
         const fileBase = invoiceFileBase(invNo);
         const opt = {
-          margin: [6, 6, 6, 6],
+          margin: [0, 0, 0, 0],
           filename: `ShreeBalaji - ${fileBase}.pdf`,
           pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
           image: { type: 'jpeg', quality: 1 },
           html2canvas: {
             scale: 3,
             useCORS: true,
-            windowWidth: exportTarget.element.scrollWidth,
+            windowWidth: Math.max(1200, exportTarget.element.scrollWidth || 0),
             windowHeight: exportTarget.element.scrollHeight,
             scrollX: 0,
             scrollY: 0,
@@ -1086,9 +1095,9 @@ function applyCurrentCopyMode(){
 }
 
 function prepareInvoiceExportElement(data, mode){
+  document.querySelectorAll('.sb-export-stage').forEach(stage => stage.remove());
   applyInvoice(data);
   applyInvoiceCopyMode(data, mode);
-  document.querySelectorAll('.sb-export-stage').forEach(stage => stage.remove());
   const clone = document.querySelector('.inv').cloneNode(true);
   clone.classList.add('export-mode');
   clone.querySelectorAll('.no-print,.del-cell,.del-btn').forEach(el => el.remove());
@@ -1110,8 +1119,8 @@ function prepareInvoiceExportElement(data, mode){
     el.removeAttribute('data-placeholder');
   });
   clone.style.width = '210mm';
-  clone.style.minHeight = '297mm';
-  clone.style.height = '297mm';
+  clone.style.minHeight = '296mm';
+  clone.style.height = '296mm';
   clone.style.margin = '0';
   clone.style.boxShadow = 'none';
   clone.style.border = '0';
@@ -1121,11 +1130,11 @@ function prepareInvoiceExportElement(data, mode){
 
   const stage = document.createElement('div');
   stage.className = 'sb-export-stage';
-  stage.style.position = 'fixed';
+  stage.style.position = 'absolute';
   stage.style.left = '0';
   stage.style.top = '0';
   stage.style.width = '210mm';
-  stage.style.minHeight = '297mm';
+  stage.style.minHeight = '296mm';
   stage.style.background = '#fff';
   stage.style.zIndex = '2147483647';
   stage.style.overflow = 'visible';
