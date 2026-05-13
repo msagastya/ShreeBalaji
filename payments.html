@@ -7,6 +7,7 @@
 <script src="assets/js/security-utils.js"></script>
 <script src="assets/js/data-cache.js"></script>
 <script src="assets/js/ui-loader.js"></script>
+<link rel="stylesheet" href="assets/css/mobile.css">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;font-size:14px}.logged-out .app{display:none}.logged-in .login-screen{display:none}
 .login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}.login-box{width:min(340px,100%);background:#fff;border:1px solid #c6d1da;padding:22px;box-shadow:0 18px 42px rgba(15,23,42,.14)}
@@ -36,9 +37,9 @@ table{width:100%;border-collapse:collapse}th{background:#223542;color:#fff;text-
 </div></div>
 </main>
 <script>
-const API_URL='https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';const LOGIN_USER='ShreeBalaji';const LOGIN_PASS='ShreeBalaji';let currentInvoice=null;let rows=[];let hydrateRun=0;
+const API_URL='https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';let currentInvoice=null;let rows=[];let hydrateRun=0;
 function getAuth(){return{username:sessionStorage.getItem('sb_user')||'',password:sessionStorage.getItem('sb_pass')||''}}function fmt(n){return Math.round(n||0).toLocaleString('en-IN')}function parseMoney(v){return parseFloat(String(v||'').replace(/[^0-9.-]/g,''))||0}
-function applyLoginState(){const a=getAuth();const ok=a.username===LOGIN_USER&&a.password===LOGIN_PASS;document.body.className=ok?'logged-in':'logged-out';if(ok)loadRows()}function login(e){e.preventDefault();const u=document.getElementById('login-user').value.trim();const p=document.getElementById('login-pass').value;if(u!==LOGIN_USER||p!==LOGIN_PASS){document.getElementById('login-error').textContent='Invalid username or password';return}sessionStorage.setItem('sb_user',u);sessionStorage.setItem('sb_pass',p);applyLoginState()}function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
+function applyLoginState(){const a=getAuth();const ok=!!a.username&&!!a.password;document.body.className=ok?'logged-in':'logged-out';if(ok)loadRows()}async function login(e){e.preventDefault();const u=document.getElementById('login-user').value.trim();const p=document.getElementById('login-pass').value;try{await api('login',{username:u,password:p});sessionStorage.setItem('sb_user',u);sessionStorage.setItem('sb_pass',p);applyLoginState()}catch(error){document.getElementById('login-error').textContent=error.message||'Invalid username or password'}}function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
 async function api(action,payload={}){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...getAuth(),...payload})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed');return d}
 function totals(data){let taxable=0;(data.items||[]).forEach(it=>{let amt=parseMoney(it.amt);if(!amt&&it.qty&&it.rate)amt=parseMoney(it.qty)*parseMoney(it.rate);taxable+=amt});const rate=parseMoney(data.invoice?.gstRate||18);const total=Math.round(taxable+(taxable*rate/100));const received=parseMoney(data.invoice?.receivedAmount||data.payment?.receivedAmount);return{total,received,due:Math.max(total-received,0)}}
 async function loadRows(){hydrateRun++;SBUI.setBusy(true,'Loading payment ledger...');try{const list=await SBDataCache.paymentLedger(api);rows=(list.rows||[]).map(row=>({no:row.invoice_no,party:row.party_name||'',date:row.invoice_date||'',data:null,total:row.total||0,received:row.received||0,due:row.due||0,loaded:true,loading:false}));renderRows();SBUI.setBusy(false,`Ready • ₹ ${fmt(list.grand?.due||0)} due`)}catch(e){console.error(e);SBUI.setBusy(false,'Error');document.getElementById('payment-body').innerHTML='<tr><td colspan="6">Could not load payments.</td></tr>'}}

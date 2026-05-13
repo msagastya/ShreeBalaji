@@ -7,6 +7,7 @@
 <script src="assets/js/security-utils.js"></script>
 <script src="assets/js/data-cache.js"></script>
 <script src="assets/js/ui-loader.js"></script>
+<link rel="stylesheet" href="assets/css/mobile.css">
 <style>
 *{margin:0;padding:0;box-sizing:border-box;}
 body{font-family:Arial,sans-serif;font-size:13px;color:#222;background:#f0f0f0;padding:20px;}
@@ -185,9 +186,6 @@ tr:nth-child(even){background:#fafafa;}
 
 <script>
 const API_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';
-const LOGIN_USER = 'ShreeBalaji';
-const LOGIN_PASS = 'ShreeBalaji';
-
 let reportData = []; // To store all loaded invoice details
 let reportHydrateRun = 0;
 
@@ -200,17 +198,19 @@ function getAuth(){
 
 function applyLoginState(){
   const auth = getAuth();
-  const ok = auth.username === LOGIN_USER && auth.password === LOGIN_PASS;
+  const ok = !!auth.username && !!auth.password;
   document.body.className = ok ? 'logged-in' : 'logged-out';
   if(ok) loadAllData();
 }
 
-function login(event){
+async function login(event){
   event.preventDefault();
   const username = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
-  if(username !== LOGIN_USER || password !== LOGIN_PASS){
-    alert('Invalid login');
+  try{
+    await api('login', { username, password });
+  } catch(error){
+    alert(error.message || 'Invalid login');
     return;
   }
   sessionStorage.setItem('sb_user', username);

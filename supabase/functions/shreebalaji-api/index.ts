@@ -29,6 +29,28 @@ async function rest(path: string, init: RequestInit = {}) {
   });
 }
 
+function isDefaultAdmin(username: unknown, password: unknown) {
+  return String(username || '') === USERNAME && String(password || '') === PASSWORD;
+}
+
+async function authenticate(username: unknown, password: unknown) {
+  const name = safeText(username);
+  if (isDefaultAdmin(name, password)) return { ok: true, username: USERNAME, role: 'admin' };
+  if (!name || !String(password || '')) return { ok: false, username: '', role: '' };
+  const r = await rest(`master?select=name,details&type=eq.user&name=eq.${encodeURIComponent(name)}&limit=1`);
+  if (!r.ok) return { ok: false, username: '', role: '' };
+  const rows = await r.json();
+  const user = rows[0];
+  const details = user?.details || {};
+  const active = details.active !== false;
+  const matches = active && String(details.password || '') === String(password || '');
+  return matches ? { ok: true, username: user.name, role: details.role || 'staff' } : { ok: false, username: '', role: '' };
+}
+
+function requireAdmin(auth: { role?: string }) {
+  return auth.role === 'admin';
+}
+
 function money(value: unknown) {
   return Number.parseFloat(String(value ?? '').replace(/[^0-9.-]/g, '')) || 0;
 }
@@ -142,6 +164,7 @@ async function auditEvent(action: string, target: string, details: Record<string
         at,
         action,
         target: safeText(target),
+        user: safeText(details.user || 'system'),
         ...details,
       },
     };
@@ -172,11 +195,104 @@ Deno.serve(async (req) => {
     return json({ error: 'Invalid JSON' }, 400);
   }
 
-  if (body.username !== USERNAME || body.password !== PASSWORD) {
+  if (body.action === 'login') {
+    const auth = await authenticate(body.username, body.password);
+    if (!auth.ok) return json({ error: 'Invalid username or password' }, 401);
+    return json({ ok: true, username: auth.username, role: auth.role });
+  }
+
+  const auth = await authenticate(body.username, body.password);
+  if (!auth.ok) {
     return json({ error: 'Invalid username or password' }, 401);
   }
 
   try {
+    if (body.action === 'listUsers') {
+      if (!requireAdmin(auth)) return json({ error: 'Admin access required' }, 403);
+      const r = await rest('master?select=name,details,updated_at&type=eq.user&order=name.asc&limit=200');
+      if (!r.ok) return json({ error: await r.text() }, r.status);
+      const users = (await r.json()).map((row: any) => ({
+        name: row.name,
+        role: row.details?.role || 'staff',
+        active: row.details?.active !== false,
+        updated_at: row.updated_at,
+      }));
+      return json({ rows: [{ name: USERNAME, role: 'admin', active: true, builtin: true }, ...users] });
+    }
+
+    if (body.action === 'createUser') {
+      if (!requireAdmin(auth)) return json({ error: 'Admin access required' }, 403);
+      const name = safeText(body.name);
+      const password = String(body.newPassword || '').trim();
+      if (!name) return json({ error: 'User name required' }, 400);
+      if (name === USERNAME) return json({ error: 'This built-in user already exists' }, 409);
+      if (password.length < 4) return json({ error: 'Password must be at least 4 characters' }, 400);
+      const exists = await rest(`master?select=name&type=eq.user&name=eq.${encodeURIComponent(name)}&limit=1`);
+      if (!exists.ok) return json({ error: await exists.text() }, exists.status);
+      if ((await exists.json()).length) return json({ error: 'User name already exists' }, 409);
+      const payload = { type: 'user', name, details: { password, role: body.role === 'admin' ? 'admin' : 'staff', active: true } };
+      const r = await rest('master', { method: 'POST', body: JSON.stringify(payload) });
+      if (!r.ok) return json({ error: await r.text() }, r.status);
+      await auditEvent('user.created', name, { user: auth.username, role: payload.details.role });
+      return json({ ok: true, user: { name, role: payload.details.role, active: true } });
+    }
+
+    if (body.action === 'resetUserPassword') {
+      if (!requireAdmin(auth)) return json({ error: 'Admin access required' }, 403);
+      const name = safeText(body.name);
+      const password = String(body.newPassword || '').trim();
+      if (!name) return json({ error: 'User name required' }, 400);
+      if (name === USERNAME) return json({ error: 'Built-in admin password is fixed in this version' }, 400);
+      if (password.length < 4) return json({ error: 'Password must be at least 4 characters' }, 400);
+      const existing = await rest(`master?select=details&type=eq.user&name=eq.${encodeURIComponent(name)}&limit=1`);
+      if (!existing.ok) return json({ error: await existing.text() }, existing.status);
+      const rows = await existing.json();
+      if (!rows.length) return json({ error: 'User not found' }, 404);
+      const details = { ...(rows[0].details || {}), password };
+      const payload = { type: 'user', name, details };
+      const r = await rest('master?on_conflict=type,name', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) return json({ error: await r.text() }, r.status);
+      await auditEvent('user.password_reset', name, { user: auth.username });
+      return json({ ok: true });
+    }
+
+    if (body.action === 'changePassword') {
+      const oldPassword = String(body.oldPassword || '');
+      const newPassword = String(body.newPassword || '').trim();
+      if (auth.username === USERNAME) return json({ error: 'Built-in admin password is fixed in this version' }, 400);
+      if (oldPassword !== String(body.password || '')) return json({ error: 'Current password is incorrect' }, 401);
+      if (newPassword.length < 4) return json({ error: 'Password must be at least 4 characters' }, 400);
+      const existing = await rest(`master?select=details&type=eq.user&name=eq.${encodeURIComponent(auth.username)}&limit=1`);
+      if (!existing.ok) return json({ error: await existing.text() }, existing.status);
+      const rows = await existing.json();
+      if (!rows.length) return json({ error: 'User not found' }, 404);
+      const details = { ...(rows[0].details || {}), password: newPassword };
+      const payload = { type: 'user', name: auth.username, details };
+      const r = await rest('master?on_conflict=type,name', {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+        body: JSON.stringify(payload),
+      });
+      if (!r.ok) return json({ error: await r.text() }, r.status);
+      await auditEvent('user.password_changed', auth.username, { user: auth.username });
+      return json({ ok: true });
+    }
+
+    if (body.action === 'deleteUser') {
+      if (!requireAdmin(auth)) return json({ error: 'Admin access required' }, 403);
+      const name = safeText(body.name);
+      if (!name) return json({ error: 'User name required' }, 400);
+      if (name === USERNAME) return json({ error: 'Built-in admin cannot be deleted' }, 400);
+      const r = await rest(`master?type=eq.user&name=eq.${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (!r.ok) return json({ error: await r.text() }, r.status);
+      await auditEvent('user.deleted', name, { user: auth.username });
+      return json({ ok: true });
+    }
+
     if (body.action === 'saveInvoice') {
       const data = body.data;
       if (!data?.invoice?.no) return json({ error: 'Invoice number required' }, 400);
@@ -203,6 +319,7 @@ Deno.serve(async (req) => {
       if (!r.ok) return json({ error: await r.text() }, r.status);
       const saved = await r.json();
       await auditEvent(existed ? 'invoice.updated' : 'invoice.created', data.invoice.no, {
+        user: auth.username,
         party: safeText(data.billTo?.name),
         total: totals.total,
         due: totals.due,
@@ -319,6 +436,7 @@ Deno.serve(async (req) => {
       if (!r.ok) return json({ error: await r.text() }, r.status);
       const saved = await r.json();
       await auditEvent(existed ? 'party.updated' : 'party.created', name, {
+        user: auth.username,
         gstin: safeText(body.details?.gstin),
         mobile: safeText(body.details?.mobile),
       });
@@ -332,6 +450,26 @@ Deno.serve(async (req) => {
       if (!r.ok) return json({ error: await r.text() }, r.status);
       const rows = await r.json();
       return json({ details: rows[0]?.details || null });
+    }
+
+    if (body.action === 'deleteInvoice') {
+      const invoiceNo = safeText(body.invoiceNo);
+      if (!invoiceNo) return json({ error: 'Invoice number required' }, 400);
+      const existed = await invoiceExists(invoiceNo);
+      const r = await rest(`invoices?invoice_no=eq.${encodeURIComponent(invoiceNo)}`, { method: 'DELETE' });
+      if (!r.ok) return json({ error: await r.text() }, r.status);
+      await auditEvent(existed ? 'invoice.deleted' : 'invoice.delete_requested', invoiceNo, { user: auth.username });
+      return json({ ok: true });
+    }
+
+    if (body.action === 'deleteParty') {
+      const name = safeText(body.name);
+      if (!name) return json({ error: 'Party name required' }, 400);
+      const existed = await partyExists(name);
+      const r = await rest(`master?type=eq.party&name=eq.${encodeURIComponent(name)}`, { method: 'DELETE' });
+      if (!r.ok) return json({ error: await r.text() }, r.status);
+      await auditEvent(existed ? 'party.deleted' : 'party.delete_requested', name, { user: auth.username });
+      return json({ ok: true });
     }
 
     return json({ error: 'Unknown action' }, 400);

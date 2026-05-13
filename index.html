@@ -10,6 +10,7 @@
 <script src="assets/js/security-utils.js"></script>
 <script src="assets/js/data-cache.js"></script>
 <script src="assets/js/ui-loader.js"></script>
+<link rel="stylesheet" href="assets/css/mobile.css">
 <style>
 /* ── RESET ── */
 *{margin:0;padding:0;box-sizing:border-box;}
@@ -801,8 +802,6 @@ tr.tb td{background:#fbf8ef;font-weight:bold;color:#102433;}
 const DEFAULT_ROWS = 10;
 const SUPABASE_URL = 'https://hhtwjimbtppatyxtjemz.supabase.co';
 const API_URL = SUPABASE_URL + '/functions/v1/shreebalaji-api';
-const LOGIN_USER = 'ShreeBalaji';
-const LOGIN_PASS = 'ShreeBalaji';
 const PREFILLED = [
   {desc:'PAPER REEL', lr:'', bill:'3',  qty:'13016', unit:'KGS', rate:'0.18'},
   {desc:'PAPER REEL', lr:'', bill:'12', qty:'13040', unit:'KGS', rate:'0.18'},
@@ -825,7 +824,7 @@ function getAuth(){
 
 function applyLoginState(){
   const auth = getAuth();
-  const ok = auth.username === LOGIN_USER && auth.password === LOGIN_PASS;
+  const ok = !!auth.username && !!auth.password;
   if(ok){
     document.body.classList.add('logged-in');
     document.body.classList.remove('logged-out');
@@ -835,12 +834,14 @@ function applyLoginState(){
   }
 }
 
-function login(event){
+async function login(event){
   event.preventDefault();
   const username = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
-  if(username !== LOGIN_USER || password !== LOGIN_PASS){
-    document.getElementById('login-error').textContent = 'Invalid username or password';
+  try{
+    await api('login', { username, password });
+  } catch(error){
+    document.getElementById('login-error').textContent = error.message || 'Invalid username or password';
     return;
   }
   sessionStorage.setItem('sb_user', username);
