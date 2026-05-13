@@ -1310,30 +1310,33 @@ async function exportZipRange() {
         continue;
       }
 
-      const element = prepareInvoiceExportElement(result.data, normalizedCopyMode);
+      const exportTarget = prepareInvoiceExportElement(result.data, normalizedCopyMode);
+      try {
+        await new Promise(r => setTimeout(r, 220));
 
-      await new Promise(r => setTimeout(r, 160));
+        const fileBase = invoiceFileBase(invNo);
+        const opt = {
+          margin: [6, 6, 6, 6],
+          filename: `ShreeBalaji - ${fileBase}.pdf`,
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
+          image: { type: 'jpeg', quality: 1 },
+          html2canvas: {
+            scale: 3,
+            useCORS: true,
+            windowWidth: exportTarget.element.scrollWidth,
+            windowHeight: exportTarget.element.scrollHeight,
+            scrollX: 0,
+            scrollY: 0,
+            logging: false
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        };
 
-      const fileBase = invoiceFileBase(invNo);
-      const opt = {
-        margin: [0, 0, 0, 0],
-        filename: `ShreeBalaji - ${fileBase}.pdf`,
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-        image: { type: 'jpeg', quality: 1 },
-        html2canvas: { 
-          scale: 3,
-          useCORS: true,
-          windowWidth: element.scrollWidth,
-          windowHeight: element.scrollHeight,
-          scrollX: 0,
-          scrollY: 0,
-          logging: false
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
-
-      const pdfBlob = await html2pdf().from(element).set(opt).output('blob');
-      folder.file(opt.filename, pdfBlob);
+        const pdfBlob = await html2pdf().from(exportTarget.element).set(opt).output('blob');
+        folder.file(opt.filename, pdfBlob);
+      } finally {
+        exportTarget.stage.remove();
+      }
     }
 
     setDbStatus("Zipping...");
@@ -1369,6 +1372,7 @@ function applyInvoiceCopyMode(data, mode){
 function prepareInvoiceExportElement(data, mode){
   applyInvoice(data);
   applyInvoiceCopyMode(data, mode);
+  document.querySelectorAll('.sb-export-stage').forEach(stage => stage.remove());
   const clone = document.querySelector('.inv').cloneNode(true);
   clone.classList.add('export-mode');
   clone.querySelectorAll('.no-print,.del-cell,.del-btn').forEach(el => el.remove());
@@ -1396,7 +1400,23 @@ function prepareInvoiceExportElement(data, mode){
   clone.style.boxShadow = 'none';
   clone.style.border = '0';
   clone.style.background = '#fff';
-  return clone;
+  clone.style.transform = 'none';
+  clone.style.transformOrigin = 'top left';
+
+  const stage = document.createElement('div');
+  stage.className = 'sb-export-stage';
+  stage.style.position = 'fixed';
+  stage.style.left = '0';
+  stage.style.top = '0';
+  stage.style.width = '210mm';
+  stage.style.minHeight = '297mm';
+  stage.style.background = '#fff';
+  stage.style.zIndex = '2147483647';
+  stage.style.overflow = 'visible';
+  stage.style.pointerEvents = 'none';
+  stage.appendChild(clone);
+  document.body.appendChild(stage);
+  return { stage, element: clone };
 }
 
 // ─── DELETE ROW ───
