@@ -662,6 +662,26 @@ Deno.serve(async (req) => {
       return json({ rows: await r.json() });
     }
 
+    if (body.action === 'exportInvoicePdf') {
+      const invoiceNo = safeText(body.invoiceNo);
+      const copyMode = safeText(body.copyMode || 'current').toLowerCase();
+      if (!invoiceNo) return json({ error: 'Invoice number required' }, 400);
+      const invoice = await loadInvoiceData(invoiceNo);
+      if (!invoice) return json({ error: 'Invoice not found' }, 404);
+      const exportData = invoiceCopyData(invoice, copyMode);
+      const pdf = makeInvoicePdf(exportData);
+      await auditEvent('invoice.pdf_exported', invoiceNo, {
+        user: auth.username,
+        copyMode,
+      });
+      return json({
+        ok: true,
+        filename: `ShreeBalaji - ${invoiceFileBase(invoiceNo)}.pdf`,
+        mime: 'application/pdf',
+        base64: bytesToBase64(pdf),
+      });
+    }
+
     if (body.action === 'exportInvoicesZip') {
       const start = Math.max(1, Number(body.start) || 1);
       const end = Math.max(start, Number(body.end) || start);
