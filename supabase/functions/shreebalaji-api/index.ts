@@ -77,6 +77,324 @@ function invoiceTotals(data: any) {
   };
 }
 
+function fmtMoney(value: unknown) {
+  return Math.round(money(value)).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+}
+
+function invoiceFileBase(invoiceNo: string) {
+  return String(invoiceNo || 'Invoice').replace(/[^A-Za-z0-9]/g, '');
+}
+
+function invoiceCopyData(data: any, mode: string) {
+  const copy = JSON.parse(JSON.stringify(data || {}));
+  const normalized = ['bill', 'paid', 'current'].includes(mode) ? mode : 'current';
+  if (!copy.invoice) copy.invoice = {};
+  if (normalized === 'bill') {
+    copy.invoice.receivedAmount = String(copy.billingOriginal?.receivedAmount ?? copy.invoice?.receivedAmount ?? '0');
+  }
+  if (normalized === 'paid') {
+    copy.invoice.receivedAmount = String(invoiceTotals(copy).total);
+  }
+  return copy;
+}
+
+function toWords(n: number) {
+  n = Math.round(n);
+  if (n === 0) return 'Zero Rupees Only';
+  const ones = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const h = (x: number): string => {
+    if (x === 0) return '';
+    if (x < 20) return `${ones[x]} `;
+    if (x < 100) return `${tens[Math.floor(x / 10)]} ${ones[x % 10] ? `${ones[x % 10]} ` : ''}`;
+    return `${ones[Math.floor(x / 100)]} Hundred ${x % 100 ? h(x % 100) : ''}`;
+  };
+  let r = '';
+  let x = n;
+  if (x >= 10000000) { r += `${h(Math.floor(x / 10000000))}Crore `; x %= 10000000; }
+  if (x >= 100000) { r += `${h(Math.floor(x / 100000))}Lakh `; x %= 100000; }
+  if (x >= 1000) { r += `${h(Math.floor(x / 1000))}Thousand `; x %= 1000; }
+  r += h(x);
+  return `Rupees ${r.trim()} Only`;
+}
+
+function pdfText(value: unknown) {
+  return String(value ?? '')
+    .replace(/[₹]/g, 'Rs.')
+    .replace(/[–—]/g, '-')
+    .replace(/[▶▼✕]/g, '')
+    .replace(/[^\x09\x0A\x0D\x20-\x7E]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function pdfEscape(value: unknown) {
+  return pdfText(value).replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function chunkText(value: unknown, maxChars: number) {
+  const words = pdfText(value).split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  let line = '';
+  for (const word of words) {
+    const next = line ? `${line} ${word}` : word;
+    if (next.length > maxChars && line) {
+      lines.push(line);
+      line = word;
+    } else {
+      line = next;
+    }
+  }
+  if (line) lines.push(line);
+  return lines.length ? lines : [''];
+}
+
+function makeInvoicePdf(data: any) {
+  const totals = invoiceTotals(data);
+  const gstRate = money(data?.invoice?.gstRate || 18);
+  const halfRate = gstRate / 2;
+  const cgst = Math.round(totals.taxable * halfRate / 100);
+  const sgst = Math.round(totals.taxable * halfRate / 100);
+  const received = money(data?.invoice?.receivedAmount);
+  const due = Math.max(totals.total - received, 0);
+  const items = (Array.isArray(data?.items) ? data.items : []).filter((item: any) =>
+    String(item.date || item.desc || item.lr || item.bill || item.qty || item.rate || item.amt).trim()
+  );
+  const ops: string[] = [];
+  const line = (x1: number, y1: number, x2: number, y2: number) => ops.push(`${x1} ${y1} m ${x2} ${y2} l S`);
+  const rect = (x: number, y: number, w: number, h: number) => ops.push(`${x} ${y} ${w} ${h} re S`);
+  const fillRect = (x: number, y: number, w: number, h: number, gray = 0.92) => ops.push(`${gray} g ${x} ${y} ${w} ${h} re f 0 g`);
+  const text = (x: number, y: number, value: unknown, size = 9, bold = false, align: 'left' | 'center' | 'right' = 'left') => {
+    const clean = pdfEscape(value);
+    const approx = clean.length * size * 0.5;
+    const tx = align === 'center' ? x - approx / 2 : align === 'right' ? x - approx : x;
+    ops.push(`BT /${bold ? 'F2' : 'F1'} ${size} Tf ${tx.toFixed(2)} ${y.toFixed(2)} Td (${clean}) Tj ET`);
+  };
+  const wrapped = (x: number, y: number, value: unknown, maxChars: number, size = 8, leading = 10) => {
+    chunkText(value, maxChars).slice(0, 4).forEach((part, index) => text(x, y - index * leading, part, size));
+  };
+
+  ops.push('0.8 w');
+  text(297, 818, 'Om Shri Ganeshay Namah', 10, true, 'center');
+  line(24, 808, 571, 808);
+  text(34, 790, 'TAX INVOICE', 18, true);
+  text(174, 794, 'ORIGINAL FOR RECIPIENT', 8, true);
+  text(532, 794, 'TRANSPORT CONTRACTORS & COMMISSION AGENTS', 5.5, true, 'right');
+  line(24, 780, 571, 780);
+  text(297, 758, 'SHREE BALAJI TEMPO SERVICES', 22, true, 'center');
+  text(297, 742, '401, Satyam-A, Siddhi Vinayak Residency, Station Road, Sachin, Surat, Gujarat - 394230', 8, false, 'center');
+  text(297, 729, 'Mobile: 9427135723    GSTIN: 24ASDPS5710Q1ZB    PAN: ASDPS5710Q    State: Gujarat (24)', 8, true, 'center');
+
+  rect(24, 704, 547, 20);
+  text(34, 710, `Invoice No.: ${data?.invoice?.no || ''}`, 9, true);
+  text(205, 710, `Invoice Date: ${data?.invoice?.date || ''}`, 9, true);
+  text(322, 710, `Place of Supply: ${data?.invoice?.placeOfSupply || 'Gujarat (24)'}`, 7.5, true);
+  text(560, 710, `Reverse Charge: ${data?.invoice?.reverseCharge || 'No'}`, 7.5, true, 'right');
+
+  rect(24, 610, 266, 84);
+  fillRect(24, 676, 266, 18, 0.9);
+  text(34, 682, 'BILL TO', 9, true);
+  text(34, 660, data?.billTo?.name || '', 13, true);
+  wrapped(34, 646, data?.billTo?.address || '', 46, 8, 10);
+  text(34, 614, `Mobile: ${data?.billTo?.mobile || ''} | GSTIN: ${data?.billTo?.gstin || ''} | PAN: ${data?.billTo?.pan || ''}`, 7, true);
+
+  rect(305, 610, 266, 84);
+  fillRect(305, 676, 266, 18, 0.9);
+  text(315, 682, 'SHIP TO', 9, true);
+  text(315, 660, data?.shipTo?.name || data?.billTo?.name || '', 13, true);
+  wrapped(315, 646, data?.shipTo?.address || data?.billTo?.address || '', 46, 8, 10);
+
+  fillRect(24, 585, 547, 18, 0.9);
+  rect(24, 585, 547, 18);
+  text(34, 591, 'PARTICULARS OF GOODS / SERVICES', 9, true);
+  const top = 562;
+  const cols = [24, 47, 100, 225, 280, 335, 425, 480, 571];
+  rect(24, top, 547, 23);
+  ['SR.', 'DATE', 'DESCRIPTION', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'AMOUNT'].forEach((head, i) => text(cols[i] + 4, top + 8, head, 7, true));
+  cols.slice(1, -1).forEach(x => line(x, top, x, top + 23));
+  let y = top - 18;
+  let totalQty = 0;
+  let unit = 'KGS';
+  items.slice(0, 12).forEach((item: any, index: number) => {
+    rect(24, y - 4, 547, 18);
+    cols.slice(1, -1).forEach(x => line(x, y - 4, x, y + 14));
+    const amount = money(item.amt) || money(item.qty) * money(item.rate);
+    totalQty += money(item.qty);
+    if (item.unit) unit = pdfText(item.unit);
+    text(30, y + 1, index + 1, 7);
+    text(52, y + 1, item.date || '', 7);
+    text(105, y + 1, item.desc || '', 7);
+    text(230, y + 1, item.lr || '', 7);
+    text(286, y + 1, item.bill || '', 7);
+    text(420, y + 1, `${fmtMoney(item.qty)}${item.qty ? unit : ''}`, 7, false, 'right');
+    text(475, y + 1, item.rate || '', 7, false, 'right');
+    text(565, y + 1, `Rs. ${fmtMoney(amount)}`, 7, true, 'right');
+    y -= 18;
+  });
+  fillRect(24, y - 4, 547, 18, 0.94);
+  rect(24, y - 4, 547, 18);
+  text(150, y + 1, 'SUBTOTAL', 8, true);
+  text(420, y + 1, `${totalQty.toLocaleString('en-IN')} ${unit}`, 8, true, 'right');
+  text(565, y + 1, `Rs. ${fmtMoney(totals.taxable)}`, 8, true, 'right');
+  y -= 34;
+
+  fillRect(24, y, 547, 18, 0.9);
+  rect(24, y, 547, 18);
+  text(34, y + 6, 'HSN / SAC WISE TAX SUMMARY', 9, true);
+  y -= 23;
+  rect(24, y, 547, 38);
+  ['HSN/SAC', 'DESCRIPTION', 'TAXABLE', 'CGST', 'CGST AMT', 'SGST', 'SGST AMT', 'TOTAL TAX', 'GROSS'].forEach((head, i) => {
+    const xs = [28, 88, 205, 270, 320, 380, 430, 490, 545];
+    text(xs[i], y + 24, head, 6, true, i > 1 ? 'center' : 'left');
+  });
+  text(52, y + 8, data?.hsn?.code || '9965', 7, false, 'center');
+  text(125, y + 8, data?.hsn?.description || 'Transport Services', 7, false, 'center');
+  text(245, y + 8, fmtMoney(totals.taxable), 7, false, 'center');
+  text(288, y + 8, `${halfRate}%`, 7, false, 'center');
+  text(345, y + 8, fmtMoney(cgst), 7, false, 'center');
+  text(395, y + 8, `${halfRate}%`, 7, false, 'center');
+  text(455, y + 8, fmtMoney(sgst), 7, false, 'center');
+  text(522, y + 8, fmtMoney(cgst + sgst), 7, true, 'center');
+  text(560, y + 8, fmtMoney(totals.total), 7, true, 'center');
+
+  const bottomY = 96;
+  rect(24, bottomY + 100, 380, 70);
+  fillRect(24, bottomY + 152, 380, 18, 0.9);
+  text(34, bottomY + 158, 'BANK DETAILS', 8, true);
+  text(34, bottomY + 140, 'Account No. : 218705500445', 8, true);
+  text(34, bottomY + 128, 'IFSC Code   : ICIC0002187', 8, true);
+  text(34, bottomY + 116, 'Bank & Branch : ICICI Bank, Sachin', 8, true);
+  rect(24, bottomY + 30, 380, 60);
+  fillRect(24, bottomY + 72, 380, 18, 0.9);
+  text(34, bottomY + 78, 'TERMS & CONDITIONS', 8, true);
+  text(34, bottomY + 60, '1. Goods once sold will not be taken back or exchanged.', 7);
+  text(34, bottomY + 49, '2. All disputes are subject to Surat jurisdiction only.', 7);
+  text(34, bottomY + 38, '3. Payment is due within the agreed credit period.', 7);
+  rect(24, bottomY, 380, 22);
+  text(34, bottomY + 12, `TOTAL AMOUNT IN WORDS: ${toWords(totals.total)}`, 7, true);
+
+  rect(412, bottomY + 30, 159, 140);
+  fillRect(412, bottomY + 152, 159, 18, 0.9);
+  text(492, bottomY + 158, 'TAX SUMMARY', 12, true, 'center');
+  text(422, bottomY + 136, 'Taxable Amount', 8);
+  text(562, bottomY + 136, `Rs. ${fmtMoney(totals.taxable)}`, 8, true, 'right');
+  text(422, bottomY + 120, `CGST @ ${halfRate}%`, 8);
+  text(562, bottomY + 120, `Rs. ${fmtMoney(cgst)}`, 8, true, 'right');
+  text(422, bottomY + 104, `SGST @ ${halfRate}%`, 8);
+  text(562, bottomY + 104, `Rs. ${fmtMoney(sgst)}`, 8, true, 'right');
+  fillRect(412, bottomY + 70, 159, 26, 0.9);
+  text(422, bottomY + 79, 'TOTAL AMOUNT', 8, true);
+  text(562, bottomY + 79, `Rs. ${fmtMoney(totals.total)}`, 8, true, 'right');
+  text(422, bottomY + 56, 'Received Amount', 8);
+  text(562, bottomY + 56, `Rs. ${fmtMoney(received)}`, 8, true, 'right');
+  text(422, bottomY + 40, 'BALANCE DUE', 8, true);
+  text(562, bottomY + 40, `Rs. ${fmtMoney(due)}`, 8, true, 'right');
+  text(562, bottomY - 4, 'For,', 8, false, 'right');
+  text(562, bottomY - 20, 'SHREE BALAJI TEMPO', 10, true, 'right');
+  text(562, bottomY - 32, 'SERVICES', 10, true, 'right');
+
+  const content = ops.join('\n');
+  const encoder = new TextEncoder();
+  const stream = encoder.encode(content);
+  const objects = [
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595.28 841.89] /Resources << /Font << /F1 4 0 R /F2 5 0 R >> >> /Contents 6 0 R >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+    '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>',
+    `<< /Length ${stream.length} >>\nstream\n${content}\nendstream`,
+  ];
+  let pdf = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((obj, index) => {
+    offsets.push(new TextEncoder().encode(pdf).length);
+    pdf += `${index + 1} 0 obj\n${obj}\nendobj\n`;
+  });
+  const xref = new TextEncoder().encode(pdf).length;
+  pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
+  offsets.slice(1).forEach(offset => { pdf += `${String(offset).padStart(10, '0')} 00000 n \n`; });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return new TextEncoder().encode(pdf);
+}
+
+const CRC_TABLE = new Uint32Array(256).map((_, n) => {
+  let c = n;
+  for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+  return c >>> 0;
+});
+
+function crc32(bytes: Uint8Array) {
+  let crc = 0xffffffff;
+  for (const byte of bytes) crc = CRC_TABLE[(crc ^ byte) & 0xff] ^ (crc >>> 8);
+  return (crc ^ 0xffffffff) >>> 0;
+}
+
+function u16(value: number) {
+  return [value & 0xff, (value >>> 8) & 0xff];
+}
+
+function u32(value: number) {
+  return [value & 0xff, (value >>> 8) & 0xff, (value >>> 16) & 0xff, (value >>> 24) & 0xff];
+}
+
+function dosDateTime(date = new Date()) {
+  const time = (date.getHours() << 11) | (date.getMinutes() << 5) | Math.floor(date.getSeconds() / 2);
+  const day = date.getDate();
+  const month = date.getMonth() + 1;
+  const year = Math.max(date.getFullYear() - 1980, 0);
+  return { time, date: (year << 9) | (month << 5) | day };
+}
+
+function concatBytes(parts: Uint8Array[]) {
+  const total = parts.reduce((sum, part) => sum + part.length, 0);
+  const out = new Uint8Array(total);
+  let offset = 0;
+  for (const part of parts) {
+    out.set(part, offset);
+    offset += part.length;
+  }
+  return out;
+}
+
+function makeZip(files: { name: string; data: Uint8Array }[]) {
+  const encoder = new TextEncoder();
+  const localParts: Uint8Array[] = [];
+  const centralParts: Uint8Array[] = [];
+  let offset = 0;
+  const dt = dosDateTime();
+  for (const file of files) {
+    const name = encoder.encode(file.name);
+    const crc = crc32(file.data);
+    const local = new Uint8Array([
+      ...u32(0x04034b50), ...u16(20), ...u16(0), ...u16(0), ...u16(dt.time), ...u16(dt.date),
+      ...u32(crc), ...u32(file.data.length), ...u32(file.data.length), ...u16(name.length), ...u16(0),
+    ]);
+    localParts.push(local, name, file.data);
+    const central = new Uint8Array([
+      ...u32(0x02014b50), ...u16(20), ...u16(20), ...u16(0), ...u16(0), ...u16(dt.time), ...u16(dt.date),
+      ...u32(crc), ...u32(file.data.length), ...u32(file.data.length), ...u16(name.length), ...u16(0), ...u16(0),
+      ...u16(0), ...u16(0), ...u32(0), ...u32(offset),
+    ]);
+    centralParts.push(central, name);
+    offset += local.length + name.length + file.data.length;
+  }
+  const central = concatBytes(centralParts);
+  const end = new Uint8Array([
+    ...u32(0x06054b50), ...u16(0), ...u16(0), ...u16(files.length), ...u16(files.length),
+    ...u32(central.length), ...u32(offset), ...u16(0),
+  ]);
+  return concatBytes([...localParts, central, end]);
+}
+
+function bytesToBase64(bytes: Uint8Array) {
+  let binary = '';
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.slice(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 function validGstin(value: unknown) {
   const text = String(value || '').trim().toUpperCase();
   return !text || /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z][1-9A-Z]Z[0-9A-Z]$/.test(text);
@@ -342,6 +660,45 @@ Deno.serve(async (req) => {
       const r = await rest(`invoices?select=invoice_no,party_name,invoice_date,updated_at&order=updated_at.desc&limit=${limit}`);
       if (!r.ok) return json({ error: await r.text() }, r.status);
       return json({ rows: await r.json() });
+    }
+
+    if (body.action === 'exportInvoicesZip') {
+      const start = Math.max(1, Number(body.start) || 1);
+      const end = Math.max(start, Number(body.end) || start);
+      const copyMode = safeText(body.copyMode || 'current').toLowerCase();
+      const prefix = safeText(body.prefix || 'INV/2627/');
+      if (end - start > 99) return json({ error: 'Export range is too large. Use 100 invoices or fewer.' }, 400);
+      const files: { name: string; data: Uint8Array }[] = [];
+      const skipped: string[] = [];
+      for (let i = start; i <= end; i++) {
+        const invoiceNo = `${prefix}${String(i).padStart(3, '0')}`;
+        const invoice = await loadInvoiceData(invoiceNo);
+        if (!invoice) {
+          skipped.push(invoiceNo);
+          continue;
+        }
+        const exportData = invoiceCopyData(invoice, copyMode);
+        files.push({
+          name: `Invoices/ShreeBalaji - ${invoiceFileBase(invoiceNo)}.pdf`,
+          data: makeInvoicePdf(exportData),
+        });
+      }
+      if (!files.length) return json({ error: 'No saved invoices found for this range.' }, 404);
+      const zip = makeZip(files);
+      await auditEvent('invoice.zip_exported', `${prefix}${String(start).padStart(3, '0')}-${String(end).padStart(3, '0')}`, {
+        user: auth.username,
+        count: files.length,
+        skipped,
+        copyMode,
+      });
+      return json({
+        ok: true,
+        filename: `ShreeBalaji Invoices ${start}-${end}.zip`,
+        mime: 'application/zip',
+        count: files.length,
+        skipped,
+        base64: bytesToBase64(zip),
+      });
     }
 
     if (body.action === 'invoiceSummaries' || body.action === 'paymentLedger' || body.action === 'reportSummary') {

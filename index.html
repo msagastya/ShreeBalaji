@@ -1009,63 +1009,25 @@ async function exportZipRange() {
     return;
   }
 
-  const zip = new JSZip();
-  const folder = zip.folder("Invoices");
   const copyMode = prompt("Copy type: current, bill, or paid", document.getElementById('copy-mode')?.value || "current");
   if(!copyMode || !['current','bill','paid'].includes(copyMode.trim().toLowerCase())){
     alert("Invalid copy type. Use current, bill, or paid.");
     return;
   }
   const normalizedCopyMode = copyMode.trim().toLowerCase();
-  setDbStatus(`Preparing ZIP (${range})...`);
+  setDbStatus(`Backend ZIP export running (${range})...`);
 
   try {
-    for (let i = start; i <= end; i++) {
-      const invNo = 'INV/2627/' + String(i).padStart(3, '0');
-      setDbStatus(`Capturing ${invNo}...`);
-
-      const result = await SBDataCache.loadInvoice(api, invNo);
-      if (!result.data) {
-        console.warn(`Skipping ${invNo}: Not found`);
-        continue;
-      }
-
-      const exportTarget = prepareInvoiceExportElement(result.data, normalizedCopyMode);
-      try {
-        await new Promise(r => setTimeout(r, 220));
-
-        const fileBase = invoiceFileBase(invNo);
-        const opt = {
-          margin: [0, 0, 0, 0],
-          filename: `ShreeBalaji - ${fileBase}.pdf`,
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] },
-          image: { type: 'jpeg', quality: 1 },
-          html2canvas: {
-            scale: 3,
-            useCORS: true,
-            windowWidth: Math.max(1200, exportTarget.element.scrollWidth || 0),
-            windowHeight: exportTarget.element.scrollHeight,
-            scrollX: 0,
-            scrollY: 0,
-            logging: false
-          },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        };
-
-        const pdfBlob = await html2pdf().from(exportTarget.element).set(opt).output('blob');
-        folder.file(opt.filename, pdfBlob);
-      } finally {
-        exportTarget.stage.remove();
-      }
-    }
-
-    setDbStatus("Zipping...");
-    const content = await zip.generateAsync({ type: "blob" });
+    const result = await api('exportInvoicesZip', { start, end, copyMode: normalizedCopyMode, prefix: 'INV/2627/' });
+    const bytes = Uint8Array.from(atob(result.base64), c => c.charCodeAt(0));
+    const content = new Blob([bytes], { type: result.mime || 'application/zip' });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(content);
-    link.download = `ShreeBalaji Invoices ${range}.zip`;
+    link.download = result.filename || `ShreeBalaji Invoices ${range}.zip`;
     link.click();
-    setDbStatus("Export Complete");
+    URL.revokeObjectURL(link.href);
+    const skipped = result.skipped?.length ? ` (${result.skipped.length} skipped)` : '';
+    setDbStatus(`Backend ZIP complete: ${result.count || 0}${skipped}`);
   } catch (error) {
     console.error(error);
     setDbStatus("Export failed");
