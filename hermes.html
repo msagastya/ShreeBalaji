@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hermes — Shree Balaji Tempo Services</title>
+<script src="assets/js/security-utils.js"></script>
+<script src="assets/js/data-cache.js"></script>
+<script src="assets/js/ui-loader.js"></script>
+<link rel="stylesheet" href="assets/css/mobile.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;font-size:14px}
+.logged-out .app{display:none}.logged-in .login-screen{display:none}
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.login-box{width:min(340px,100%);background:#fff;border:1px solid #c6d1da;padding:22px;box-shadow:0 18px 42px rgba(15,23,42,.14)}
+.login-box h1{font-size:22px;margin-bottom:14px;color:#102433}.login-box label{display:block;font-size:12px;font-weight:bold;margin:10px 0 5px}
+.login-box input{width:100%;border:1px solid #b8c4cc;padding:9px;font-size:15px}.login-box button{width:100%;margin-top:14px;padding:10px;border:0;background:#102433;color:#fff;font-weight:bold;cursor:pointer}
+.login-error{color:#b71c1c;font-size:12px;margin-top:8px;min-height:16px}
+.topbar{background:#102433;color:#fff;padding:14px 22px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;box-shadow:0 8px 24px rgba(15,23,42,.18)}
+.brand{font-weight:bold;letter-spacing:.8px;margin-right:8px}.topbar a{color:#fff;text-decoration:none;font-size:12.5px;font-weight:bold;background:rgba(255,255,255,.1);padding:7px 11px;border-radius:4px}
+.topbar a.active{background:#d6b767;color:#102433}.status{margin-left:auto;color:#dce7ef;font-size:12.5px}.logout{border:0;background:#263d4d;color:#fff;padding:7px 11px;border-radius:4px;cursor:pointer}
+.wrap{max-width:1180px;margin:0 auto;padding:24px 18px 40px}
+.hero{background:#fff;border:1px solid #c6d1da;border-left:6px solid #16738a;padding:22px;margin-bottom:18px;box-shadow:0 14px 34px rgba(15,23,42,.08)}
+.hero h1{font-size:28px;letter-spacing:.4px;margin-bottom:7px;color:#102433}.hero p{color:#526371;line-height:1.5;max-width:850px}
+.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:18px}
+.panel{background:#fff;border:1px solid #c6d1da;box-shadow:0 10px 28px rgba(15,23,42,.06);overflow:hidden}
+.panel h2{font-size:18px;color:#102433;padding:16px 16px 10px}.panel-body{padding:16px}
+.ask-row{display:grid;grid-template-columns:1fr auto;gap:10px;margin-bottom:12px}
+.ask-row input{border:1px solid #b8c4cc;padding:12px;font-size:15px;border-radius:4px}
+.ask-row button,.chip,.action{border:0;background:#16738a;color:#fff;padding:10px 13px;border-radius:4px;font-weight:bold;cursor:pointer}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.chip{background:#eef5f8;color:#102433;border:1px solid #c6d1da}
+.answer{border:1px solid #d8e1e7;background:#f8fbfd;min-height:220px;padding:14px;line-height:1.45}
+.answer h3{font-size:16px;margin-bottom:8px;color:#102433}.answer p{margin-bottom:9px}.answer ul{padding-left:18px;margin:8px 0}.answer li{margin:5px 0}
+.kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.kpi{background:#102433;color:#fff;padding:14px}.kpi label{display:block;color:#b8c6cf;font-size:10.5px;font-weight:bold;text-transform:uppercase;margin-bottom:7px}.kpi strong{font-size:22px}
+.list{display:grid;gap:9px}.item{border:1px solid #d8e1e7;background:#f8fbfd;padding:11px}.item strong{display:block;color:#102433}.item span{display:block;color:#596b78;font-size:12px;margin-top:4px}
+.tools{display:grid;grid-template-columns:1fr 1fr;gap:10px}.action{background:#263d4d;text-align:center;text-decoration:none;display:block}
+.action.gold{background:#d6b767;color:#102433}.warning{border-left:4px solid #c27400;background:#fff8ee}.danger{border-left:4px solid #b3261e;background:#fff5f4}.ok{border-left:4px solid #207c48;background:#f1fbf4}
+@media(max-width:900px){.grid{grid-template-columns:1fr}.status{margin-left:0;width:100%}}
+@media(max-width:620px){.topbar{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:12px}.brand,.status,.logout{grid-column:1/-1}.topbar a,.logout{text-align:center}.wrap{padding:14px 10px 28px}.hero{padding:16px;border-left:0;border-top:5px solid #16738a}.hero h1{font-size:23px}.ask-row{grid-template-columns:1fr}.kpis,.tools{grid-template-columns:1fr}.panel{margin-left:-10px;margin-right:-10px;border-left:0;border-right:0}}
+</style>
+</head>
+<body class="logged-out">
+<div class="login-screen">
+  <form class="login-box" onsubmit="login(event)">
+    <h1>HERMES LOGIN</h1>
+    <label>USERNAME</label><input id="login-user" type="text" autocomplete="username" value="ShreeBalaji">
+    <label>PASSWORD</label><input id="login-pass" type="password" autocomplete="current-password" value="ShreeBalaji">
+    <button type="submit">LOGIN</button><div class="login-error" id="login-error"></div>
+  </form>
+</div>
+<main class="app">
+  <nav class="topbar">
+    <div class="brand">SHREE BALAJI</div>
+    <a href="dashboard.html">DASHBOARD</a>
+    <a href="index.html">PREVIEW</a>
+    <a href="invoice-entry.html">ENTRY</a>
+    <a href="master.html">PARTIES</a>
+    <a href="payments.html">PAYMENTS</a>
+    <a href="report.html">REPORTS</a>
+    <a class="active" href="hermes.html">HERMES</a>
+    <div class="status" id="db-status">Ready</div>
+    <button class="logout" onclick="logout()">LOGOUT</button>
+  </nav>
+  <div class="wrap">
+    <section class="hero">
+      <h1>Hermes Business Assistant</h1>
+      <p>Zero-cost assistant for invoice search, payment risk, data health, audit review, and export guidance. It uses existing business data only; no paid AI API is called.</p>
+    </section>
+    <section class="grid">
+      <div class="panel">
+        <h2>Ask Hermes</h2>
+        <div class="panel-body">
+          <div class="ask-row">
+            <input id="ask-input" placeholder="Try: due invoices, invoice 2627001, April total, top parties, health check" onkeydown="if(event.key==='Enter') askHermes()">
+            <button onclick="askHermes()">ASK</button>
+          </div>
+          <div class="chips">
+            <button class="chip" onclick="quickAsk('show due invoices')">Due invoices</button>
+            <button class="chip" onclick="quickAsk('top pending parties')">Top pending parties</button>
+            <button class="chip" onclick="quickAsk('data health check')">Health check</button>
+            <button class="chip" onclick="quickAsk('recent activity')">Recent activity</button>
+            <button class="chip" onclick="quickAsk('export help')">Export help</button>
+          </div>
+          <div class="answer" id="answer-box">
+            <h3>Ready</h3>
+            <p>Ask about invoices, dues, parties, audit logs, monthly totals, or system health.</p>
+          </div>
+        </div>
+      </div>
+      <aside class="panel">
+        <h2>Live Business Snapshot</h2>
+        <div class="panel-body">
+          <div class="kpis">
+            <div class="kpi"><label>Invoices</label><strong id="kpi-count">0</strong></div>
+            <div class="kpi"><label>Gross</label><strong id="kpi-total">₹ 0</strong></div>
+            <div class="kpi"><label>Due</label><strong id="kpi-due">₹ 0</strong></div>
+            <div class="kpi"><label>Parties</label><strong id="kpi-parties">0</strong></div>
+          </div>
+          <div style="height:14px"></div>
+          <div class="tools">
+            <a class="action gold" href="invoice-entry.html">New Invoice</a>
+            <a class="action" href="payments.html">Payments</a>
+            <a class="action" href="report.html">Reports</a>
+            <button class="action" onclick="refreshHermes()">Refresh</button>
+          </div>
+        </div>
+      </aside>
+      <div class="panel">
+        <h2>Alerts</h2>
+        <div class="panel-body list" id="alerts-list"><div class="item">Loading alerts...</div></div>
+      </div>
+      <div class="panel">
+        <h2>Recent Activity</h2>
+        <div class="panel-body list" id="activity-list"><div class="item">Loading activity...</div></div>
+      </div>
+    </section>
+  </div>
+</main>
+<script>
+const API_URL='https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';
+let hermes={rows:[],parties:[],audits:[],health:null,loaded:false};
+
+function getAuth(){return{username:sessionStorage.getItem('sb_user')||'',password:sessionStorage.getItem('sb_pass')||''}}
+function fmt(n){return Math.round(Number(n)||0).toLocaleString('en-IN')}
+function rupee(n){return '₹ '+fmt(n)}
+function applyLoginState(){const a=getAuth();const ok=!!a.username&&!!a.password;document.body.className=ok?'logged-in':'logged-out';if(ok)loadHermes()}
+async function login(e){e.preventDefault();const u=document.getElementById('login-user').value.trim();const p=document.getElementById('login-pass').value;try{await api('login',{username:u,password:p});sessionStorage.setItem('sb_user',u);sessionStorage.setItem('sb_pass',p);document.getElementById('login-error').textContent='';applyLoginState()}catch(error){document.getElementById('login-error').textContent=error.message||'Invalid username or password'}}
+function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
+async function api(action,payload={}){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...getAuth(),...payload})});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed');return d}
+function html(items){return items.join('')}
+function rowLink(no){return `<a href="index.html?invoice=${encodeURIComponent(no)}">${escapeHtml(no)}</a>`}
+
+async function loadHermes(options={}){
+  SBUI.setBusy(true,'Hermes loading live data...');
+  try{
+    const [summary, parties, audit, health] = await Promise.all([
+      SBDataCache.invoiceSummaries(api, options),
+      SBDataCache.listParties(api, options),
+      SBDataCache.listAudit(api, options),
+      SBDataCache.systemHealth(api, options)
+    ]);
+    hermes={rows:summary.rows||[],grand:summary.grand||{},count:summary.count||0,parties:parties.rows||[],audits:audit.rows||[],health,loaded:true};
+    renderSnapshot();
+    renderAlerts();
+    renderActivity();
+    SBUI.setBusy(false,'Hermes ready');
+  }catch(error){
+    console.error(error);
+    SBUI.setBusy(false,'Hermes error');
+    document.getElementById('answer-box').innerHTML=`<h3>Could not load Hermes</h3><p>${escapeHtml(error.message)}</p>`;
+  }
+}
+
+function renderSnapshot(){
+  setText('kpi-count', hermes.count || hermes.rows.length);
+  setText('kpi-total', rupee(hermes.grand?.total || hermes.rows.reduce((s,r)=>s+(Number(r.total)||0),0)));
+  setText('kpi-due', rupee(hermes.grand?.due || hermes.rows.reduce((s,r)=>s+(Number(r.due)||0),0)));
+  setText('kpi-parties', hermes.parties.length || new Set(hermes.rows.map(r=>r.party_name).filter(Boolean)).size);
+}
+
+function renderAlerts(){
+  const alerts=[];
+  const dueRows=hermes.rows.filter(r=>Number(r.due)>0).sort((a,b)=>Number(b.due)-Number(a.due));
+  if(dueRows.length) alerts.push({cls:'warning',title:`${dueRows.length} invoices have balance due`,body:`Highest due: ${dueRows[0].invoice_no} • ${dueRows[0].party_name||'Party'} • ${rupee(dueRows[0].due)}`});
+  const gaps=findInvoiceGaps();
+  if(gaps.length) alerts.push({cls:'danger',title:`Invoice sequence gaps found`,body:gaps.slice(0,8).join(', ')+(gaps.length>8?'...':'')});
+  const badGst=hermes.parties.filter(p=>p.gstin&&!validateGstin(p.gstin));
+  if(badGst.length) alerts.push({cls:'danger',title:`${badGst.length} parties have invalid GSTIN`,body:badGst.slice(0,4).map(p=>p.name).join(', ')});
+  if(!alerts.length) alerts.push({cls:'ok',title:'No major data alerts found',body:'Invoices, parties, and balances look stable from the available data.'});
+  document.getElementById('alerts-list').innerHTML=alerts.map(a=>`<div class="item ${a.cls}"><strong>${escapeHtml(a.title)}</strong><span>${escapeHtml(a.body)}</span></div>`).join('');
+}
+
+function renderActivity(){
+  const rows=hermes.audits.slice(0,8);
+  document.getElementById('activity-list').innerHTML=rows.length?rows.map(row=>{
+    const d=row.details||{};
+    return `<div class="item"><strong>${escapeHtml(String(d.action||'activity').replaceAll('.',' '))}</strong><span>${escapeHtml(d.target||'')} • ${escapeHtml(d.user||'system')} • ${escapeHtml(new Date(d.at||row.updated_at||Date.now()).toLocaleString())}</span></div>`;
+  }).join(''):'<div class="item">No audit activity found.</div>';
+}
+
+function quickAsk(text){document.getElementById('ask-input').value=text;askHermes()}
+
+function askHermes(){
+  if(!hermes.loaded){return document.getElementById('answer-box').innerHTML='<h3>Loading</h3><p>Hermes is still loading data.</p>'}
+  const q=document.getElementById('ask-input').value.trim().toLowerCase();
+  if(!q)return;
+  if(/\b(due|pending|balance|outstanding)\b/.test(q)) return answerDue(q);
+  if(/\btop\b.*\b(part|party|parties)\b|\bparty exposure\b/.test(q)) return answerTopParties();
+  if(/\bhealth|check|issue|problem|missing|gap|duplicate\b/.test(q)) return answerHealth();
+  if(/\baudit|activity|deleted|created|updated|recent\b/.test(q)) return answerActivity();
+  if(/\bexport|zip|pdf|print|backup\b/.test(q)) return answerExport();
+  if(/\bmonth|april|january|february|march|may|june|july|august|september|october|november|december\b/.test(q)) return answerMonth(q);
+  const invoice=extractInvoice(q);
+  if(invoice) return answerInvoice(invoice);
+  return answerSearch(q);
+}
+
+function answerDue(){
+  const rows=hermes.rows.filter(r=>Number(r.due)>0).sort((a,b)=>Number(b.due)-Number(a.due)).slice(0,12);
+  const total=rows.reduce((s,r)=>s+Number(r.due||0),0);
+  setAnswer('Due Invoices', [
+    `<p>Total visible due in top list: <b>${rupee(total)}</b></p>`,
+    `<ul>${rows.map(r=>`<li>${rowLink(r.invoice_no)} • ${escapeHtml(r.party_name||'Party')} • ${rupee(r.due)}</li>`).join('')||'<li>No due invoices found.</li>'}</ul>`
+  ]);
+}
+
+function answerTopParties(){
+  const map=new Map();
+  hermes.rows.forEach(r=>{const key=r.party_name||'Unknown';const cur=map.get(key)||{name:key,count:0,total:0,due:0};cur.count++;cur.total+=Number(r.total)||0;cur.due+=Number(r.due)||0;map.set(key,cur)});
+  const rows=[...map.values()].sort((a,b)=>b.due-a.due).slice(0,10);
+  setAnswer('Top Pending Parties', [`<ul>${rows.map(r=>`<li><b>${escapeHtml(r.name)}</b> • ${r.count} invoices • gross ${rupee(r.total)} • due ${rupee(r.due)}</li>`).join('')}</ul>`]);
+}
+
+function answerHealth(){
+  const gaps=findInvoiceGaps();
+  const badGst=hermes.parties.filter(p=>p.gstin&&!validateGstin(p.gstin));
+  const dueCount=hermes.rows.filter(r=>Number(r.due)>0).length;
+  setAnswer('Data Health Check', [
+    `<ul>`,
+    `<li>Invoices loaded: <b>${hermes.rows.length}</b></li>`,
+    `<li>Parties loaded: <b>${hermes.parties.length}</b></li>`,
+    `<li>Invoices with due balance: <b>${dueCount}</b></li>`,
+    `<li>Sequence gaps: <b>${gaps.length?gaps.join(', '):'none found'}</b></li>`,
+    `<li>Invalid GSTIN parties: <b>${badGst.length?badGst.map(p=>escapeHtml(p.name)).join(', '):'none found'}</b></li>`,
+    `<li>Backend health: <b>${hermes.health?.ok?'online':'check failed'}</b></li>`,
+    `</ul>`
+  ]);
+}
+
+function answerActivity(){
+  setAnswer('Recent Audit Activity', [`<ul>${hermes.audits.slice(0,12).map(row=>{const d=row.details||{};return `<li>${escapeHtml(String(d.action||'activity').replaceAll('.',' '))} • ${escapeHtml(d.target||'')} • ${escapeHtml(d.user||'system')}</li>`}).join('')||'<li>No audit activity found.</li>'}</ul>`]);
+}
+
+function answerExport(){
+  setAnswer('Export Guidance', [
+    `<p>For exact A4 single invoice output, keep using <b>Preview → Print / Save PDF</b>.</p>`,
+    `<p>For bulk PDFs, the accurate path should be a system/Chrome-generated exporter reviewed against the single print before replacing the current flow.</p>`,
+    `<ul><li>JSON backup: Dashboard → Export JSON Backup</li><li>CSV reports: Reports or Payments export buttons</li><li>Invoice print: Preview page only</li></ul>`
+  ]);
+}
+
+function answerMonth(q){
+  const monthMap={january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12'};
+  let month=Object.keys(monthMap).find(m=>q.includes(m));
+  let mm=month?monthMap[month]:(q.match(/\b(0?[1-9]|1[0-2])\b/)||[])[1]?.padStart(2,'0');
+  if(!mm)return answerSearch(q);
+  const rows=hermes.rows.filter(r=>String(r.invoice_date||'').split('/')[1]===mm);
+  const total=rows.reduce((s,r)=>s+Number(r.total||0),0);
+  const due=rows.reduce((s,r)=>s+Number(r.due||0),0);
+  setAnswer(`Month Summary ${mm}`, [`<p><b>${rows.length}</b> invoices • gross <b>${rupee(total)}</b> • due <b>${rupee(due)}</b></p>`,`<ul>${rows.slice(0,12).map(r=>`<li>${rowLink(r.invoice_no)} • ${escapeHtml(r.party_name||'Party')} • ${rupee(r.total)}</li>`).join('')||'<li>No invoices found for this month.</li>'}</ul>`]);
+}
+
+function answerInvoice(invoiceNo){
+  const clean=invoiceNo.replace(/[^A-Za-z0-9]/g,'').toUpperCase();
+  const row=hermes.rows.find(r=>String(r.invoice_no||'').replace(/[^A-Za-z0-9]/g,'').toUpperCase()===clean);
+  if(!row)return setAnswer('Invoice Not Found',[`<p>No saved invoice matched <b>${escapeHtml(invoiceNo)}</b>.</p>`]);
+  setAnswer(`Invoice ${row.invoice_no}`, [
+    `<ul>`,
+    `<li>Party: <b>${escapeHtml(row.party_name||'')}</b></li>`,
+    `<li>Date: <b>${escapeHtml(row.invoice_date||'')}</b></li>`,
+    `<li>Gross: <b>${rupee(row.total)}</b></li>`,
+    `<li>Received: <b>${rupee(row.received)}</b></li>`,
+    `<li>Due: <b>${rupee(row.due)}</b></li>`,
+    `<li>Status: <b>${escapeHtml(row.status||'')}</b></li>`,
+    `</ul><p><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">Open invoice preview</a></p>`
+  ]);
+}
+
+function answerSearch(q){
+  const rows=hermes.rows.filter(r=>String(r.invoice_no+' '+r.party_name+' '+r.invoice_date).toLowerCase().includes(q)).slice(0,12);
+  setAnswer('Search Results', [`<ul>${rows.map(r=>`<li>${rowLink(r.invoice_no)} • ${escapeHtml(r.party_name||'Party')} • ${escapeHtml(r.invoice_date||'')} • ${rupee(r.total)}</li>`).join('')||'<li>No matching invoices found. Try invoice number, party name, due invoices, or health check.</li>'}</ul>`]);
+}
+
+function setAnswer(title, parts){document.getElementById('answer-box').innerHTML=`<h3>${escapeHtml(title)}</h3>${parts.join('')}`}
+function extractInvoice(q){const m=q.match(/inv[^0-9]*(\d{4})[^0-9]*(\d{1,4})|\b(2627\d{3})\b|\b(\d{1,3})\b/);if(!m)return'';if(m[1]&&m[2])return`INV/${m[1]}/${m[2].padStart(3,'0')}`;if(m[3])return`INV/${m[3].slice(0,4)}/${m[3].slice(4)}`;if(m[4])return`INV/2627/${m[4].padStart(3,'0')}`;return''}
+function findInvoiceGaps(){const nums=hermes.rows.map(r=>{const m=String(r.invoice_no||'').match(/INV\/2627\/(\d+)/);return m?Number(m[1]):null}).filter(Number.isFinite).sort((a,b)=>a-b);const set=new Set(nums);const gaps=[];if(!nums.length)return gaps;for(let i=nums[0];i<=nums[nums.length-1];i++)if(!set.has(i))gaps.push('INV/2627/'+String(i).padStart(3,'0'));return gaps}
+function refreshHermes(){SBDataCache.clearAll();loadHermes({force:true})}
+applyLoginState();
+</script>
+</body>
+</html>
