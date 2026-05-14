@@ -96,7 +96,7 @@ body{font-family:Arial,Helvetica,sans-serif;font-size:16.5px;color:#222;backgrou
 .summary-row span{color:#5b6c78}.summary-row strong{font-size:15px;color:#102433;text-align:right;}
 .preview-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;}
 .preview-actions button,.preview-actions a{border:none;border-radius:6px;padding:11px 12px;font-size:13px;font-weight:bold;cursor:pointer;text-align:center;text-decoration:none;}
-.primary-action{background:#16738a;color:#fff;}.secondary-action{background:#eef5f8;color:#102433;border:1px solid #c6d1da!important;}.print-action{background:#207c48;color:#fff;grid-column:1/-1;}
+.primary-action{background:#16738a;color:#fff;}.secondary-action{background:#eef5f8;color:#102433;border:1px solid #c6d1da!important;}.print-action{background:#207c48;color:#fff;}.system-pdf-action{background:#5b45a8;color:#fff;grid-column:1/-1;}
 .document-stage{width:100%;background:#dfe7ec;padding:22px 0 30px;}
 
 /* ── INVOICE WRAPPER ── */
@@ -588,7 +588,8 @@ tr.tb td{background:#fbf8ef;font-weight:bold;color:#102433;}
         <button class="primary-action" onclick="openEntryPage()">Open Entry</button>
         <button class="secondary-action" onclick="loadSelectedInvoice()">Refresh</button>
         <button class="secondary-action" onclick="exportZipRange()">Export ZIP</button>
-        <button class="print-action" onclick="exportSinglePdf()">Download Strict A4 PDF</button>
+        <button class="print-action" onclick="window.print()">Print / Save PDF</button>
+        <button class="system-pdf-action" onclick="exportSinglePdf()">Download System A4 PDF</button>
       </div>
     </div>
   </div>
