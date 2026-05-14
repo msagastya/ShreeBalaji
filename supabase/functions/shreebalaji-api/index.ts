@@ -155,11 +155,13 @@ function makeInvoicePdf(data: any) {
   const halfRate = gstRate / 2;
   const cgst = Math.round(totals.taxable * halfRate / 100);
   const sgst = Math.round(totals.taxable * halfRate / 100);
+  const grossTotal = Math.round(totals.taxable) + cgst + sgst;
   const received = money(data?.invoice?.receivedAmount);
-  const due = Math.max(totals.total - received, 0);
+  const due = Math.max(grossTotal - received, 0);
   const items = (Array.isArray(data?.items) ? data.items : []).filter((item: any) =>
-    String(item.date || item.desc || item.lr || item.bill || item.qty || item.rate || item.amt).trim()
+    String(item.date || item.party || item.desc || item.lr || item.bill || item.qty || item.rate || item.amt).trim()
   );
+  const showPartyColumn = items.some((item: any) => String(item.party || '').trim());
   const ops: string[] = [];
   const line = (x1: number, y1: number, x2: number, y2: number) => ops.push(`${x1} ${y1} m ${x2} ${y2} l S`);
   const rect = (x: number, y: number, w: number, h: number) => ops.push(`${x} ${y} ${w} ${h} re S`);
@@ -173,7 +175,12 @@ function makeInvoicePdf(data: any) {
   const wrapped = (x: number, y: number, value: unknown, maxChars: number, size = 8, leading = 10) => {
     chunkText(value, maxChars).slice(0, 4).forEach((part, index) => text(x, y - index * leading, part, size));
   };
+  const clipped = (value: unknown, maxChars: number) => {
+    const clean = pdfText(value);
+    return clean.length > maxChars ? clean.slice(0, maxChars) : clean;
+  };
 
+  ops.push('q 0.92 0 0 1 24 0 cm');
   ops.push('0.8 w');
   text(297, 818, 'Om Shri Ganeshay Namah', 10, true, 'center');
   line(24, 808, 571, 808);
@@ -208,14 +215,21 @@ function makeInvoicePdf(data: any) {
   rect(24, 585, 547, 18);
   text(34, 591, 'PARTICULARS OF GOODS / SERVICES', 9, true);
   const top = 562;
-  const cols = [24, 47, 100, 225, 280, 335, 425, 480, 571];
+  const cols = showPartyColumn
+    ? [24, 47, 100, 170, 260, 305, 350, 430, 480, 571]
+    : [24, 47, 100, 225, 280, 335, 425, 480, 571];
   rect(24, top, 547, 23);
-  ['SR.', 'DATE', 'DESCRIPTION', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'AMOUNT'].forEach((head, i) => text(cols[i] + 4, top + 8, head, 7, true));
+  const itemHeads = showPartyColumn
+    ? ['SR.', 'DATE', 'PARTY', 'DESCRIPTION', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'AMOUNT']
+    : ['SR.', 'DATE', 'DESCRIPTION', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'AMOUNT'];
+  itemHeads.forEach((head, i) => text(cols[i] + 4, top + 8, head, 7, true));
   cols.slice(1, -1).forEach(x => line(x, top, x, top + 23));
   let y = top - 18;
   let totalQty = 0;
   let unit = 'KGS';
-  items.slice(0, 12).forEach((item: any, index: number) => {
+  const itemRows = [...items];
+  while (itemRows.length < 12) itemRows.push({});
+  itemRows.forEach((item: any, index: number) => {
     rect(24, y - 4, 547, 18);
     cols.slice(1, -1).forEach(x => line(x, y - 4, x, y + 14));
     const amount = money(item.amt) || money(item.qty) * money(item.rate);
@@ -223,12 +237,19 @@ function makeInvoicePdf(data: any) {
     if (item.unit) unit = pdfText(item.unit);
     text(30, y + 1, index + 1, 7);
     text(52, y + 1, item.date || '', 7);
-    text(105, y + 1, item.desc || '', 7);
-    text(230, y + 1, item.lr || '', 7);
-    text(286, y + 1, item.bill || '', 7);
-    text(420, y + 1, `${fmtMoney(item.qty)}${item.qty ? unit : ''}`, 7, false, 'right');
+    if (showPartyColumn) {
+      text(105, y + 1, clipped(item.party, 14), 7);
+      text(175, y + 1, clipped(item.desc, 18), 7);
+      text(265, y + 1, item.lr || '', 7);
+      text(311, y + 1, item.bill || '', 7);
+    } else {
+      text(105, y + 1, clipped(item.desc, 26), 7);
+      text(230, y + 1, item.lr || '', 7);
+      text(286, y + 1, item.bill || '', 7);
+    }
+    text(420, y + 1, item.qty ? `${fmtMoney(item.qty)} ${unit}` : '', 7, false, 'right');
     text(475, y + 1, item.rate || '', 7, false, 'right');
-    text(565, y + 1, `Rs. ${fmtMoney(amount)}`, 7, true, 'right');
+    text(565, y + 1, amount ? `Rs. ${fmtMoney(amount)}` : '', 7, true, 'right');
     y -= 18;
   });
   fillRect(24, y - 4, 547, 18, 0.94);
@@ -255,43 +276,60 @@ function makeInvoicePdf(data: any) {
   text(395, y + 8, `${halfRate}%`, 7, false, 'center');
   text(455, y + 8, fmtMoney(sgst), 7, false, 'center');
   text(522, y + 8, fmtMoney(cgst + sgst), 7, true, 'center');
-  text(560, y + 8, fmtMoney(totals.total), 7, true, 'center');
+  text(560, y + 8, fmtMoney(grossTotal), 7, true, 'center');
 
-  const bottomY = 96;
-  rect(24, bottomY + 100, 380, 70);
-  fillRect(24, bottomY + 152, 380, 18, 0.9);
-  text(34, bottomY + 158, 'BANK DETAILS', 8, true);
-  text(34, bottomY + 140, 'Account No. : 218705500445', 8, true);
-  text(34, bottomY + 128, 'IFSC Code   : ICIC0002187', 8, true);
-  text(34, bottomY + 116, 'Bank & Branch : ICICI Bank, Sachin', 8, true);
-  rect(24, bottomY + 30, 380, 60);
-  fillRect(24, bottomY + 72, 380, 18, 0.9);
-  text(34, bottomY + 78, 'TERMS & CONDITIONS', 8, true);
-  text(34, bottomY + 60, '1. Goods once sold will not be taken back or exchanged.', 7);
-  text(34, bottomY + 49, '2. All disputes are subject to Surat jurisdiction only.', 7);
-  text(34, bottomY + 38, '3. Payment is due within the agreed credit period.', 7);
-  rect(24, bottomY, 380, 22);
-  text(34, bottomY + 12, `TOTAL AMOUNT IN WORDS: ${toWords(totals.total)}`, 7, true);
+  const lowerTop = y - 10;
+  const leftX = 24;
+  const leftW = 380;
+  const rightX = 412;
+  const rightW = 159;
+  const bankY = lowerTop - 70;
+  rect(leftX, bankY, leftW, 70);
+  fillRect(leftX, bankY + 52, leftW, 18, 0.9);
+  text(leftX + 10, bankY + 58, 'BANK DETAILS', 8, true);
+  text(leftX + 10, bankY + 40, 'Account No.  : 218705500445', 8, true);
+  text(leftX + 10, bankY + 28, 'IFSC Code    : ICIC0002187', 8, true);
+  text(leftX + 10, bankY + 16, 'Bank & Branch : ICICI Bank, Sachin', 8, true);
 
-  rect(412, bottomY + 30, 159, 140);
-  fillRect(412, bottomY + 152, 159, 18, 0.9);
-  text(492, bottomY + 158, 'TAX SUMMARY', 12, true, 'center');
-  text(422, bottomY + 136, 'Taxable Amount', 8);
-  text(562, bottomY + 136, `Rs. ${fmtMoney(totals.taxable)}`, 8, true, 'right');
-  text(422, bottomY + 120, `CGST @ ${halfRate}%`, 8);
-  text(562, bottomY + 120, `Rs. ${fmtMoney(cgst)}`, 8, true, 'right');
-  text(422, bottomY + 104, `SGST @ ${halfRate}%`, 8);
-  text(562, bottomY + 104, `Rs. ${fmtMoney(sgst)}`, 8, true, 'right');
-  fillRect(412, bottomY + 70, 159, 26, 0.9);
-  text(422, bottomY + 79, 'TOTAL AMOUNT', 8, true);
-  text(562, bottomY + 79, `Rs. ${fmtMoney(totals.total)}`, 8, true, 'right');
-  text(422, bottomY + 56, 'Received Amount', 8);
-  text(562, bottomY + 56, `Rs. ${fmtMoney(received)}`, 8, true, 'right');
-  text(422, bottomY + 40, 'BALANCE DUE', 8, true);
-  text(562, bottomY + 40, `Rs. ${fmtMoney(due)}`, 8, true, 'right');
-  text(562, bottomY - 4, 'For,', 8, false, 'right');
-  text(562, bottomY - 20, 'SHREE BALAJI TEMPO', 10, true, 'right');
-  text(562, bottomY - 32, 'SERVICES', 10, true, 'right');
+  const termsY = bankY - 64;
+  rect(leftX, termsY, leftW, 58);
+  fillRect(leftX, termsY + 40, leftW, 18, 0.9);
+  text(leftX + 10, termsY + 46, 'TERMS & CONDITIONS', 8, true);
+  text(leftX + 10, termsY + 29, '1. Goods once sold will not be taken back or exchanged.', 7);
+  text(leftX + 10, termsY + 19, '2. All disputes are subject to Surat jurisdiction only.', 7);
+  text(leftX + 10, termsY + 9, '3. Payment is due within the agreed credit period.', 7);
+
+  const wordsY = termsY - 28;
+  rect(leftX, wordsY, leftW, 22);
+  text(leftX + 10, wordsY + 12, 'TOTAL AMOUNT IN WORDS:', 7, true);
+  text(leftX + 112, wordsY + 12, toWords(grossTotal), 7, false);
+
+  const taxY = termsY;
+  rect(rightX, taxY, rightW, 134);
+  fillRect(rightX, taxY + 116, rightW, 18, 0.9);
+  text(rightX + rightW / 2, taxY + 122, 'TAX SUMMARY', 12, true, 'center');
+  text(rightX + 10, taxY + 100, 'Taxable Amount', 8);
+  text(rightX + rightW - 10, taxY + 100, `Rs. ${fmtMoney(totals.taxable)}`, 8, true, 'right');
+  text(rightX + 10, taxY + 84, `CGST @ ${halfRate}%`, 8);
+  text(rightX + rightW - 10, taxY + 84, `Rs. ${fmtMoney(cgst)}`, 8, true, 'right');
+  text(rightX + 10, taxY + 68, `SGST @ ${halfRate}%`, 8);
+  text(rightX + rightW - 10, taxY + 68, `Rs. ${fmtMoney(sgst)}`, 8, true, 'right');
+  fillRect(rightX, taxY + 36, rightW, 24, 0.9);
+  text(rightX + 10, taxY + 45, 'TOTAL AMOUNT', 8, true);
+  text(rightX + rightW - 10, taxY + 45, `Rs. ${fmtMoney(grossTotal)}`, 8, true, 'right');
+  text(rightX + 10, taxY + 20, 'Received Amount', 8);
+  text(rightX + rightW - 10, taxY + 20, `Rs. ${fmtMoney(received)}`, 8, true, 'right');
+  text(rightX + 10, taxY + 5, 'BALANCE DUE', 8, true);
+  text(rightX + rightW - 10, taxY + 5, `Rs. ${fmtMoney(due)}`, 8, true, 'right');
+
+  const signY = taxY - 78;
+  rect(rightX, signY, rightW, 72);
+  text(rightX + rightW - 10, signY + 59, 'Authorised Signatory', 7, false, 'right');
+  line(rightX + 68, signY + 35, rightX + rightW - 10, signY + 35);
+  text(rightX + rightW - 10, signY + 25, 'For,', 8, false, 'right');
+  text(rightX + rightW - 10, signY + 12, 'SHREE BALAJI TEMPO', 9, true, 'right');
+  text(rightX + rightW - 10, signY + 2, 'SERVICES', 9, true, 'right');
+  ops.push('Q');
 
   const content = ops.join('\n');
   const encoder = new TextEncoder();
