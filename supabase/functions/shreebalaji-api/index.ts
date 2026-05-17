@@ -33,6 +33,37 @@ function isDefaultAdmin(username: unknown, password: unknown) {
   return String(username || '') === USERNAME && String(password || '') === PASSWORD;
 }
 
+function randomSalt() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes).map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function sha256Hex(value: string) {
+  const bytes = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(bytes)).map(byte => byte.toString(16).padStart(2, '0')).join('');
+}
+
+async function passwordDetails(password: string, details: Record<string, unknown> = {}) {
+  const salt = randomSalt();
+  return {
+    ...details,
+    passwordHash: await sha256Hex(`${salt}:${password}`),
+    passwordSalt: salt,
+    passwordUpdatedAt: new Date().toISOString(),
+    password: undefined,
+  };
+}
+
+async function passwordMatches(details: any, password: unknown) {
+  if (!details || details.active === false) return false;
+  const candidate = String(password || '');
+  if (details.passwordHash && details.passwordSalt) {
+    return await sha256Hex(`${details.passwordSalt}:${candidate}`) === String(details.passwordHash);
+  }
+  return String(details.password || '') === candidate;
+}
+
 async function authenticate(username: unknown, password: unknown) {
   const name = safeText(username);
   if (isDefaultAdmin(name, password)) return { ok: true, username: USERNAME, role: 'admin' };
@@ -42,8 +73,7 @@ async function authenticate(username: unknown, password: unknown) {
   const rows = await r.json();
   const user = rows[0];
   const details = user?.details || {};
-  const active = details.active !== false;
-  const matches = active && String(details.password || '') === String(password || '');
+  const matches = await passwordMatches(details, password);
   return matches ? { ok: true, username: user.name, role: details.role || 'staff' } : { ok: false, username: '', role: '' };
 }
 
@@ -483,7 +513,7 @@ function safeText(value: unknown, fallback = '') {
   return String(value ?? fallback).trim().slice(0, 240);
 }
 
-async function invoiceRows(limit = 500) {
+async function invoiceRows(limit = 1000) {
   const r = await rest(`invoices?select=invoice_no,party_name,invoice_date,updated_at,data&order=updated_at.desc&limit=${limit}`);
   if (!r.ok) throw new Error(await r.text());
   return await r.json();
@@ -586,7 +616,8 @@ Deno.serve(async (req) => {
       const exists = await rest(`master?select=name&type=eq.user&name=eq.${encodeURIComponent(name)}&limit=1`);
       if (!exists.ok) return json({ error: await exists.text() }, exists.status);
       if ((await exists.json()).length) return json({ error: 'User name already exists' }, 409);
-      const payload = { type: 'user', name, details: { password, role: body.role === 'admin' ? 'admin' : 'staff', active: true } };
+      const details = await passwordDetails(password, { role: body.role === 'admin' ? 'admin' : 'staff', active: true });
+      const payload = { type: 'user', name, details };
       const r = await rest('master', { method: 'POST', body: JSON.stringify(payload) });
       if (!r.ok) return json({ error: await r.text() }, r.status);
       await auditEvent('user.created', name, { user: auth.username, role: payload.details.role });
@@ -604,7 +635,7 @@ Deno.serve(async (req) => {
       if (!existing.ok) return json({ error: await existing.text() }, existing.status);
       const rows = await existing.json();
       if (!rows.length) return json({ error: 'User not found' }, 404);
-      const details = { ...(rows[0].details || {}), password };
+      const details = await passwordDetails(password, rows[0].details || {});
       const payload = { type: 'user', name, details };
       const r = await rest('master?on_conflict=type,name', {
         method: 'POST',
@@ -620,13 +651,13 @@ Deno.serve(async (req) => {
       const oldPassword = String(body.oldPassword || '');
       const newPassword = String(body.newPassword || '').trim();
       if (auth.username === USERNAME) return json({ error: 'Built-in admin password is fixed in this version' }, 400);
-      if (oldPassword !== String(body.password || '')) return json({ error: 'Current password is incorrect' }, 401);
       if (newPassword.length < 4) return json({ error: 'Password must be at least 4 characters' }, 400);
       const existing = await rest(`master?select=details&type=eq.user&name=eq.${encodeURIComponent(auth.username)}&limit=1`);
       if (!existing.ok) return json({ error: await existing.text() }, existing.status);
       const rows = await existing.json();
       if (!rows.length) return json({ error: 'User not found' }, 404);
-      const details = { ...(rows[0].details || {}), password: newPassword };
+      if (!await passwordMatches(rows[0].details || {}, oldPassword)) return json({ error: 'Current password is incorrect' }, 401);
+      const details = await passwordDetails(newPassword, rows[0].details || {});
       const payload = { type: 'user', name: auth.username, details };
       const r = await rest('master?on_conflict=type,name', {
         method: 'POST',
@@ -760,7 +791,7 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === 'invoiceSummaries' || body.action === 'paymentLedger' || body.action === 'reportSummary') {
-      const limit = Math.min(Number(body.limit) || 500, 500);
+      const limit = Math.min(Number(body.limit) || 1000, 2000);
       const summaries = (await invoiceRows(limit)).map(invoiceSummary);
       const grand = summaries.reduce((acc: any, row: any) => {
         acc.taxable += row.taxable;
@@ -784,7 +815,7 @@ Deno.serve(async (req) => {
       const masterRows = await r.json();
       const byName = new Map<string, any>();
       for (const row of masterRows) byName.set(row.name, { name: row.name, ...(row.details || {}), updated_at: row.updated_at });
-      for (const row of await invoiceRows(500)) {
+      for (const row of await invoiceRows(1000)) {
         const name = row.data?.billTo?.name || row.party_name;
         if (name && !byName.has(name)) byName.set(name, { name, ...(row.data?.billTo || {}) });
       }
@@ -792,7 +823,7 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === 'backupData') {
-      const invoices = await invoiceRows(500);
+      const invoices = await invoiceRows(1000);
       const partiesResponse = await rest('master?select=name,details,updated_at&type=eq.party&order=name.asc&limit=500');
       if (!partiesResponse.ok) return json({ error: await partiesResponse.text() }, partiesResponse.status);
       const parties = await partiesResponse.json();
@@ -816,7 +847,7 @@ Deno.serve(async (req) => {
     }
 
     if (body.action === 'systemHealth') {
-      const invoices = await invoiceRows(500);
+      const invoices = await invoiceRows(1000);
       const partiesResponse = await rest('master?select=name,updated_at&type=eq.party&order=updated_at.desc&limit=500');
       if (!partiesResponse.ok) return json({ error: await partiesResponse.text() }, partiesResponse.status);
       const parties = await partiesResponse.json();

@@ -1,6 +1,6 @@
 (function(){
   const PREFIX = 'sb:data:v1:';
-  const LIST_TTL = 2 * 60 * 1000;
+  const LIST_TTL = 10 * 60 * 1000;
   const DETAIL_TTL = 24 * 60 * 60 * 1000;
 
   function key(parts){
