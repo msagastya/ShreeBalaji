@@ -189,8 +189,8 @@ async function login(event){
   applyLoginState();
 }
 
-function logout(){
-  SBApp.clearAuth();
+async function logout(){
+  await SBApp.logout();
   applyLoginState();
 }
 

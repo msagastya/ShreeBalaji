@@ -105,7 +105,7 @@ function fmt(n){return Math.round(Number(n)||0).toLocaleString('en-IN')}
 function rupee(n){return 'Rs '+fmt(n)}
 function applyLoginState(){const auth=getAuth();const ok=!!auth.username&&!!auth.password;document.body.className=ok?'logged-in':'logged-out';if(ok)loadHermes()}
 async function login(event){event.preventDefault();const username=document.getElementById('login-user').value.trim();const password=document.getElementById('login-pass').value;try{const auth=await api('login',{username,password});SBApp.saveAuth(username,password,auth.role,auth.sessionToken);document.getElementById('login-error').textContent='';applyLoginState()}catch(error){document.getElementById('login-error').textContent=error.message||'Invalid username or password'}}
-function logout(){SBApp.clearAuth();applyLoginState()}
+async function logout(){await SBApp.logout();applyLoginState()}
 async function api(action,payload={}){return SBApp.api(action,payload)}
 function rowLink(no){return `<a href="index.html?invoice=${encodeURIComponent(no)}">${escapeHtml(no)}</a>`}
 

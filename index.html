@@ -858,8 +858,8 @@ async function login(event){
   if(IS_PREVIEW_PAGE) populateInvoiceDropdown();
 }
 
-function logout(){
-  SBApp.clearAuth();
+async function logout(){
+  await SBApp.logout();
   applyLoginState();
 }
 

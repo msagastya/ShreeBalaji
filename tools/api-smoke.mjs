@@ -43,6 +43,14 @@ if (zipBytes.length < 1000 || zipBytes.subarray(0, 2).toString('utf8') !== 'PK')
   throw new Error(`exportInvoicesZip returned an invalid ZIP (${zipBytes.length} bytes)`);
 }
 const bad = await post({ action: 'login', username, password: `${password}-wrong` });
+const logout = await post({ action: 'logout', username, sessionToken: login.sessionToken });
+if (!logout.response.ok) {
+  throw new Error(`logout failed: HTTP ${logout.response.status} ${JSON.stringify(logout.data)}`);
+}
+const revoked = await post({ action: 'systemHealth', username, sessionToken: login.sessionToken });
+if (revoked.response.status !== 401) {
+  throw new Error(`revoked token should return 401, got ${revoked.response.status}`);
+}
 
 if (bad.response.status !== 401) {
   throw new Error(`bad login should return 401, got ${bad.response.status}`);
@@ -57,5 +65,6 @@ console.log(JSON.stringify({
   tokenOnlyAuth: { status: tokenOnly.response.status },
   pdf: { filename: pdf.filename, bytes: pdfBytes.length },
   zip: { filename: zip.filename, count: zip.count, bytes: zipBytes.length },
+  logout: { status: logout.response.status, revokedStatus: revoked.response.status },
   badLogin: { status: bad.response.status },
 }, null, 2));

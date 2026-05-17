@@ -66,7 +66,7 @@
 
   function updatePassword(password){
     const auth = getAuth();
-    if(auth.username) saveAuth(auth.username, password, auth.role);
+    if(auth.username) saveAuth(auth.username, password, auth.role, auth.sessionToken);
   }
 
   function clearAuth(){
@@ -90,6 +90,16 @@
     return result;
   }
 
+  async function logout(){
+    try{
+      const auth = getAuth();
+      if(auth.sessionToken) await api('logout', { sessionToken: auth.sessionToken });
+    }catch(_){
+    }finally{
+      clearAuth();
+    }
+  }
+
   function applyBodyLoginState(){
     document.body.classList.toggle('logged-in', isLoggedIn());
     document.body.classList.toggle('logged-out', !isLoggedIn());
@@ -101,6 +111,7 @@
     saveAuth,
     updatePassword,
     clearAuth,
+    logout,
     isLoggedIn,
     applyBodyLoginState,
   };

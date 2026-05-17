@@ -101,6 +101,17 @@ async function authenticateSession(sessionToken: unknown) {
   return { ok: true, username: user.name, role: user.details?.role || details.role || 'staff' };
 }
 
+async function revokeSession(sessionToken: unknown) {
+  const token = String(sessionToken || '');
+  if (!token) return false;
+  const tokenHash = await sha256Hex(token);
+  const r = await rest(`master?type=eq.session&name=eq.${encodeURIComponent(tokenHash)}`, {
+    method: 'DELETE',
+    headers: { Prefer: 'return=minimal' },
+  });
+  return r.ok;
+}
+
 async function authenticate(username: unknown, password: unknown, sessionToken: unknown = '') {
   const sessionAuth = await authenticateSession(sessionToken);
   if (sessionAuth.ok) return sessionAuth;
@@ -625,6 +636,11 @@ Deno.serve(async (req) => {
     if (!auth.ok) return json({ error: 'Invalid username or password' }, 401);
     const session = await createSession(auth);
     return json({ ok: true, username: auth.username, role: auth.role, sessionToken: session.token, expiresAt: session.expiresAt });
+  }
+
+  if (body.action === 'logout') {
+    await revokeSession(body.sessionToken);
+    return json({ ok: true });
   }
 
   const auth = await authenticate(body.username, body.password, body.sessionToken);
