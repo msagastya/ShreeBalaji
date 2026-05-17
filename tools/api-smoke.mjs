@@ -32,6 +32,16 @@ const summaries = await expectOk('invoiceSummaries', { action: 'invoiceSummaries
 const payments = await expectOk('paymentLedger', { action: 'paymentLedger' });
 const reports = await expectOk('reportSummary', { action: 'reportSummary' });
 const health = await expectOk('systemHealth', { action: 'systemHealth' });
+const pdf = await expectOk('exportInvoicePdf', { action: 'exportInvoicePdf', invoiceNo: 'INV/2627/001', copyMode: 'current' });
+const pdfBytes = Buffer.from(pdf.base64 || '', 'base64');
+if (pdfBytes.length < 1000 || pdfBytes.subarray(0, 4).toString('utf8') !== '%PDF') {
+  throw new Error(`exportInvoicePdf returned an invalid PDF (${pdfBytes.length} bytes)`);
+}
+const zip = await expectOk('exportInvoicesZip', { action: 'exportInvoicesZip', start: 1, end: 1, copyMode: 'current', prefix: 'INV/2627/' });
+const zipBytes = Buffer.from(zip.base64 || '', 'base64');
+if (zipBytes.length < 1000 || zipBytes.subarray(0, 2).toString('utf8') !== 'PK') {
+  throw new Error(`exportInvoicesZip returned an invalid ZIP (${zipBytes.length} bytes)`);
+}
 const bad = await post({ action: 'login', username, password: `${password}-wrong` });
 
 if (bad.response.status !== 401) {
@@ -45,5 +55,7 @@ console.log(JSON.stringify({
   reportSummary: { count: reports.count, parties: reports.parties },
   systemHealth: { invoices: health.invoice_count, parties: health.party_count },
   tokenOnlyAuth: { status: tokenOnly.response.status },
+  pdf: { filename: pdf.filename, bytes: pdfBytes.length },
+  zip: { filename: zip.filename, count: zip.count, bytes: zipBytes.length },
   badLogin: { status: bad.response.status },
 }, null, 2));
