@@ -8,6 +8,7 @@
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <script defer src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="assets/js/security-utils.js"></script>
+<script src="assets/js/app-core.js"></script>
 <script src="assets/js/data-cache.js"></script>
 <script src="assets/js/ui-loader.js"></script>
 <link rel="stylesheet" href="assets/css/mobile.css">
@@ -1094,10 +1095,7 @@ const entryPartyCache = new Map();
 const pendingInvoiceFromUrl = new URLSearchParams(window.location.search).get('invoice') || '';
 
 function getAuth(){
-  return {
-    username: sessionStorage.getItem('sb_user') || '',
-    password: sessionStorage.getItem('sb_pass') || ''
-  };
+  return SBApp.getAuth();
 }
 
 function applyLoginState(){
@@ -1118,13 +1116,12 @@ async function login(event){
   const username = document.getElementById('login-user').value.trim();
   const password = document.getElementById('login-pass').value;
   try{
-    await api('login', { username, password });
+    const auth = await api('login', { username, password });
+    SBApp.saveAuth(username, password, auth.role, auth.sessionToken);
   } catch(error){
     document.getElementById('login-error').textContent = error.message || 'Invalid username or password';
     return;
   }
-  sessionStorage.setItem('sb_user', username);
-  sessionStorage.setItem('sb_pass', password);
   document.getElementById('login-error').textContent = '';
   applyLoginState();
   if(pendingInvoiceFromUrl){
@@ -1135,21 +1132,12 @@ async function login(event){
 }
 
 function logout(){
-  sessionStorage.removeItem('sb_user');
-  sessionStorage.removeItem('sb_pass');
+  SBApp.clearAuth();
   applyLoginState();
 }
 
 async function api(action, payload={}){
-  const auth = getAuth();
-  const response = await fetch(API_URL, {
-    method: 'POST',
-    headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ action, ...auth, ...payload })
-  });
-  const result = await response.json().catch(() => ({}));
-  if(!response.ok) throw new Error(result.error || 'Request failed');
-  return result;
+  return SBApp.api(action, payload);
 }
 
 // ─── FORMAT NUMBER ───

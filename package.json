@@ -1,0 +1,7 @@
+{
+  "scripts": {
+    "check": "node tools/static-check.mjs && node --check assets/js/app-core.js && node --check assets/js/data-cache.js && node --check assets/js/security-utils.js && node --check assets/js/ui-loader.js",
+    "smoke:api": "node tools/api-smoke.mjs"
+  },
+  "devDependencies": {}
+}

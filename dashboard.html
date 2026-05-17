@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dashboard — Shree Balaji Tempo Services</title>
 <script src="assets/js/security-utils.js"></script>
+<script src="assets/js/app-core.js"></script>
 <script src="assets/js/data-cache.js"></script>
 <script src="assets/js/ui-loader.js"></script>
 <link rel="stylesheet" href="assets/css/mobile.css">
@@ -131,13 +132,13 @@ body{font-family:Arial,Helvetica,sans-serif;background:#eef3f6;color:#17212b;fon
 </main>
 <script>
 const API_URL='https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';
-function getAuth(){return{username:sessionStorage.getItem('sb_user')||'',password:sessionStorage.getItem('sb_pass')||''}}
+function getAuth(){return SBApp.getAuth()}
 function fmt(n){return Math.round(n||0).toLocaleString('en-IN')}
 function parseMoney(v){return parseFloat(String(v||'').replace(/[^0-9.-]/g,''))||0}
 function applyLoginState(){const a=getAuth();const ok=!!a.username&&!!a.password;document.body.className=ok?'logged-in':'logged-out';const form=document.getElementById('change-pass-form');if(form)form.style.display=a.username==='ShreeBalaji'?'none':'grid';if(ok)loadDashboard()}
-async function login(e){e.preventDefault();const u=document.getElementById('login-user').value.trim();const p=document.getElementById('login-pass').value;try{await api('login',{username:u,password:p});sessionStorage.setItem('sb_user',u);sessionStorage.setItem('sb_pass',p);document.getElementById('login-error').textContent='';applyLoginState()}catch(error){document.getElementById('login-error').textContent=error.message||'Invalid username or password'}}
-function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
-async function api(action,payload={}){const r=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...getAuth(),...payload})});const data=await r.json().catch(()=>({}));if(!r.ok)throw new Error(data.error||'Request failed');return data}
+async function login(e){e.preventDefault();const u=document.getElementById('login-user').value.trim();const p=document.getElementById('login-pass').value;try{const auth=await api('login',{username:u,password:p});SBApp.saveAuth(u,p,auth.role,auth.sessionToken);document.getElementById('login-error').textContent='';applyLoginState()}catch(error){document.getElementById('login-error').textContent=error.message||'Invalid username or password'}}
+function logout(){SBApp.clearAuth();applyLoginState()}
+async function api(action,payload={}){return SBApp.api(action,payload)}
 let dashboardRows=[];
 async function loadDashboard(){SBUI.setBusy(true,'Loading business summary...');try{const list=await SBDataCache.invoiceSummaries(api);const rows=list.rows||[];dashboardRows=rows;const recent=rows.slice(0,12);const body=document.getElementById('recent-body');body.innerHTML='';document.getElementById('stat-count').textContent=list.count||rows.length;document.getElementById('stat-total').textContent='₹ '+fmt(list.grand?.total||0);document.getElementById('stat-due').textContent='₹ '+fmt(list.grand?.due||0);document.getElementById('stat-parties').textContent=list.parties||new Set(rows.map(r=>r.party_name).filter(Boolean)).size;for(const row of recent){const tr=document.createElement('tr');tr.innerHTML=`<td><a href="index.html?invoice=${encodeURIComponent(row.invoice_no)}">${escapeHtml(row.invoice_no)}</a></td><td>${escapeHtml(row.invoice_date||'')}</td><td>${escapeHtml(row.party_name||'')}</td><td class="amt">₹ ${fmt(row.total)}</td><td class="amt">₹ ${fmt(row.due)}</td><td>${escapeHtml(row.status||'')}</td>`;body.appendChild(tr)}if(!rows.length)body.innerHTML='<tr><td colspan="6">No invoices found.</td></tr>';renderPartyExposure(rows);await Promise.all([loadActivity(),loadHealth(),loadUsers()]);SBUI.setBusy(false,'Ready')}catch(e){console.error(e);SBUI.setBusy(false,'Error');document.getElementById('recent-body').innerHTML='<tr><td colspan="6">Could not load dashboard.</td></tr>'}}
 function renderPartyExposure(rows){const map=new Map();rows.forEach(row=>{const key=row.party_name||'Unknown';const item=map.get(key)||{party:key,count:0,total:0,due:0};item.count++;item.total+=Number(row.total)||0;item.due+=Number(row.due)||0;map.set(key,item)});const body=document.getElementById('party-exposure');body.innerHTML='';[...map.values()].sort((a,b)=>b.due-a.due).slice(0,10).forEach(row=>{const tr=document.createElement('tr');tr.innerHTML=`<td>${escapeHtml(row.party)}</td><td class="amt">${row.count}</td><td class="amt">₹ ${fmt(row.total)}</td><td class="amt">₹ ${fmt(row.due)}</td>`;body.appendChild(tr)});if(!body.children.length)body.innerHTML='<tr><td colspan="4">No party exposure found.</td></tr>'}
@@ -150,7 +151,7 @@ async function loadUsers(){const body=document.getElementById('user-list');try{c
 async function createUser(){const name=document.getElementById('new-user-name').value.trim();const pass=document.getElementById('new-user-pass').value;const role=document.getElementById('new-user-role').value;try{await api('createUser',{name,newPassword:pass,role});document.getElementById('new-user-name').value='';document.getElementById('new-user-pass').value='';await loadUsers();await loadActivity()}catch(e){alert(e.message)}}
 async function deleteUser(name){if(!confirm('Delete user '+name+'?'))return;try{await api('deleteUser',{name});await loadUsers();await loadActivity()}catch(e){alert(e.message)}}
 async function resetUserPassword(name){const next=prompt('New password for '+name);if(!next)return;try{await api('resetUserPassword',{name,newPassword:next});await loadActivity();alert('Password reset. Admin cannot view it later.')}catch(e){alert(e.message)}}
-async function changeMyPassword(){const oldPassword=document.getElementById('old-pass').value;const newPassword=document.getElementById('new-pass').value;try{await api('changePassword',{oldPassword,newPassword});sessionStorage.setItem('sb_pass',newPassword);document.getElementById('old-pass').value='';document.getElementById('new-pass').value='';await loadActivity();alert('Password changed.')}catch(e){alert(e.message)}}
+async function changeMyPassword(){const oldPassword=document.getElementById('old-pass').value;const newPassword=document.getElementById('new-pass').value;try{await api('changePassword',{oldPassword,newPassword});SBApp.updatePassword(newPassword);document.getElementById('old-pass').value='';document.getElementById('new-pass').value='';await loadActivity();alert('Password changed.')}catch(e){alert(e.message)}}
 applyLoginState();
 </script>
 </body>

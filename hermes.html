@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Hermes Online - Shree Balaji Tempo Services</title>
 <script src="assets/js/security-utils.js"></script>
+<script src="assets/js/app-core.js"></script>
 <script src="assets/js/data-cache.js"></script>
 <script src="assets/js/ui-loader.js"></script>
 <link rel="stylesheet" href="assets/css/mobile.css">
@@ -99,13 +100,13 @@ body{font-family:Arial,Helvetica,sans-serif;background:#edf3f6;color:#162330;fon
 const API_URL='https://hhtwjimbtppatyxtjemz.supabase.co/functions/v1/shreebalaji-api';
 let hermes={rows:[],parties:[],audits:[],health:null,loaded:false};
 
-function getAuth(){return{username:sessionStorage.getItem('sb_user')||'',password:sessionStorage.getItem('sb_pass')||''}}
+function getAuth(){return SBApp.getAuth()}
 function fmt(n){return Math.round(Number(n)||0).toLocaleString('en-IN')}
 function rupee(n){return 'Rs '+fmt(n)}
 function applyLoginState(){const auth=getAuth();const ok=!!auth.username&&!!auth.password;document.body.className=ok?'logged-in':'logged-out';if(ok)loadHermes()}
-async function login(event){event.preventDefault();const username=document.getElementById('login-user').value.trim();const password=document.getElementById('login-pass').value;try{await api('login',{username,password});sessionStorage.setItem('sb_user',username);sessionStorage.setItem('sb_pass',password);document.getElementById('login-error').textContent='';applyLoginState()}catch(error){document.getElementById('login-error').textContent=error.message||'Invalid username or password'}}
-function logout(){sessionStorage.removeItem('sb_user');sessionStorage.removeItem('sb_pass');applyLoginState()}
-async function api(action,payload={}){const response=await fetch(API_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action,...getAuth(),...payload})});const data=await response.json().catch(()=>({}));if(!response.ok)throw new Error(data.error||'Request failed');return data}
+async function login(event){event.preventDefault();const username=document.getElementById('login-user').value.trim();const password=document.getElementById('login-pass').value;try{const auth=await api('login',{username,password});SBApp.saveAuth(username,password,auth.role,auth.sessionToken);document.getElementById('login-error').textContent='';applyLoginState()}catch(error){document.getElementById('login-error').textContent=error.message||'Invalid username or password'}}
+function logout(){SBApp.clearAuth();applyLoginState()}
+async function api(action,payload={}){return SBApp.api(action,payload)}
 function rowLink(no){return `<a href="index.html?invoice=${encodeURIComponent(no)}">${escapeHtml(no)}</a>`}
 
 async function loadHermes(options={}){

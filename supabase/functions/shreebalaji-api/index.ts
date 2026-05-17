@@ -64,7 +64,46 @@ async function passwordMatches(details: any, password: unknown) {
   return String(details.password || '') === candidate;
 }
 
-async function authenticate(username: unknown, password: unknown) {
+async function createSession(auth: { username: string; role: string }) {
+  const token = `${crypto.randomUUID()}${randomSalt()}`;
+  const tokenHash = await sha256Hex(token);
+  const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+  const payload = {
+    type: 'session',
+    name: tokenHash,
+    details: { username: auth.username, role: auth.role, expiresAt },
+  };
+  await rest('master?on_conflict=type,name', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(payload),
+  });
+  return { token, expiresAt };
+}
+
+async function authenticateSession(sessionToken: unknown) {
+  const token = String(sessionToken || '');
+  if (!token) return { ok: false, username: '', role: '' };
+  const tokenHash = await sha256Hex(token);
+  const r = await rest(`master?select=details&type=eq.session&name=eq.${encodeURIComponent(tokenHash)}&limit=1`);
+  if (!r.ok) return { ok: false, username: '', role: '' };
+  const rows = await r.json();
+  const details = rows[0]?.details || {};
+  if (!details.username || !details.expiresAt || new Date(details.expiresAt).getTime() <= Date.now()) {
+    return { ok: false, username: '', role: '' };
+  }
+  if (details.username === USERNAME) return { ok: true, username: USERNAME, role: 'admin' };
+  const userResponse = await rest(`master?select=name,details&type=eq.user&name=eq.${encodeURIComponent(details.username)}&limit=1`);
+  if (!userResponse.ok) return { ok: false, username: '', role: '' };
+  const users = await userResponse.json();
+  const user = users[0];
+  if (!user || user.details?.active === false) return { ok: false, username: '', role: '' };
+  return { ok: true, username: user.name, role: user.details?.role || details.role || 'staff' };
+}
+
+async function authenticate(username: unknown, password: unknown, sessionToken: unknown = '') {
+  const sessionAuth = await authenticateSession(sessionToken);
+  if (sessionAuth.ok) return sessionAuth;
   const name = safeText(username);
   if (isDefaultAdmin(name, password)) return { ok: true, username: USERNAME, role: 'admin' };
   if (!name || !String(password || '')) return { ok: false, username: '', role: '' };
@@ -584,10 +623,11 @@ Deno.serve(async (req) => {
   if (body.action === 'login') {
     const auth = await authenticate(body.username, body.password);
     if (!auth.ok) return json({ error: 'Invalid username or password' }, 401);
-    return json({ ok: true, username: auth.username, role: auth.role });
+    const session = await createSession(auth);
+    return json({ ok: true, username: auth.username, role: auth.role, sessionToken: session.token, expiresAt: session.expiresAt });
   }
 
-  const auth = await authenticate(body.username, body.password);
+  const auth = await authenticate(body.username, body.password, body.sessionToken);
   if (!auth.ok) {
     return json({ error: 'Invalid username or password' }, 401);
   }
