@@ -246,6 +246,13 @@ function makeInvoicePdf(data: any) {
   const line = (x1: number, y1: number, x2: number, y2: number) => ops.push(`${x1} ${y1} m ${x2} ${y2} l S`);
   const rect = (x: number, y: number, w: number, h: number) => ops.push(`${x} ${y} ${w} ${h} re S`);
   const fillRect = (x: number, y: number, w: number, h: number, gray = 0.92) => ops.push(`${gray} g ${x} ${y} ${w} ${h} re f 0 g`);
+  const triangle = (x: number, y: number, direction: 'right' | 'down' = 'right', size = 7) => {
+    if (direction === 'down') {
+      ops.push(`${x} ${y + size} m ${x + size} ${y + size} l ${x + size / 2} ${y} l h f`);
+    } else {
+      ops.push(`${x} ${y} m ${x} ${y + size} l ${x + size} ${y + size / 2} l h f`);
+    }
+  };
   const text = (x: number, y: number, value: unknown, size = 9, bold = false, align: 'left' | 'center' | 'right' = 'left') => {
     const clean = pdfEscape(value);
     const approx = clean.length * size * 0.5;
@@ -262,153 +269,179 @@ function makeInvoicePdf(data: any) {
 
   ops.push('q 0.92 0 0 1 24 0 cm');
   ops.push('0.8 w');
-  text(297, 818, 'Om Shri Ganeshay Namah', 10, true, 'center');
-  line(24, 808, 571, 808);
-  text(34, 790, 'TAX INVOICE', 18, true);
-  text(174, 794, 'ORIGINAL FOR RECIPIENT', 8, true);
-  text(532, 794, 'TRANSPORT CONTRACTORS & COMMISSION AGENTS', 5.5, true, 'right');
-  line(24, 780, 571, 780);
+  const sectionMark = (x: number, y: number, label: string, direction: 'right' | 'down' = 'right', size = 8) => {
+    triangle(x, y - 1, direction, 7);
+    text(x + 13, y, label, size, true);
+  };
+  const moneyText = (value: unknown) => `Rs. ${fmtMoney(value)}`;
+  text(297, 820, 'Om Shri Ganeshay Namah', 11, true, 'center');
+  line(18, 807, 577, 807);
+  text(28, 790, 'T A X   I N V O I C E', 16, true);
+  rect(160, 782, 110, 14);
+  text(215, 786, 'ORIGINAL FOR RECIPIENT', 7, true, 'center');
+  text(574, 790, 'TRANSPORT CONTRACTORS & COMMISSION AGENTS', 7, true, 'right');
   text(297, 758, 'SHREE BALAJI TEMPO SERVICES', 22, true, 'center');
-  text(297, 742, '401, Satyam-A, Siddhi Vinayak Residency, Station Road, Sachin, Surat, Gujarat - 394230', 8, false, 'center');
-  text(297, 729, 'Mobile: 9427135723    GSTIN: 24ASDPS5710Q1ZB    PAN: ASDPS5710Q    State: Gujarat (24)', 8, true, 'center');
+  text(297, 742, '401, Satyam-A, Siddhi Vinayak Residency, Station Road, Sachin, Surat, Gujarat - 394230', 8.5, false, 'center');
+  text(297, 730, 'Mobile: 9427135723    GSTIN: 24ASDPS5710Q1ZB    PAN: ASDPS5710Q    State: Gujarat (24)', 9, true, 'center');
+  line(18, 723, 577, 723);
 
-  rect(24, 704, 547, 20);
-  text(34, 710, `Invoice No.: ${data?.invoice?.no || ''}`, 9, true);
-  text(205, 710, `Invoice Date: ${data?.invoice?.date || ''}`, 9, true);
-  text(322, 710, `Place of Supply: ${data?.invoice?.placeOfSupply || 'Gujarat (24)'}`, 7.5, true);
-  text(560, 710, `Reverse Charge: ${data?.invoice?.reverseCharge || 'No'}`, 7.5, true, 'right');
+  rect(24, 688, 547, 30);
+  fillRect(24, 688, 4, 30, 0);
+  text(36, 708, 'Invoice No.:', 10, true);
+  text(36, 697, data?.invoice?.no || '', 10, true);
+  text(212, 708, 'Invoice Date:', 10, true);
+  text(212, 697, data?.invoice?.date || '', 10, true);
+  text(340, 708, 'Place of Supply:', 10, true);
+  text(340, 697, data?.invoice?.placeOfSupply || 'Gujarat (24)', 10, true);
+  text(558, 708, 'Reverse Charge:', 10, true, 'right');
+  text(558, 697, data?.invoice?.reverseCharge || 'No', 10, true, 'right');
 
-  rect(24, 610, 266, 84);
-  fillRect(24, 676, 266, 18, 0.9);
-  text(34, 682, 'BILL TO', 9, true);
-  text(34, 660, data?.billTo?.name || '', 13, true);
-  wrapped(34, 646, data?.billTo?.address || '', 46, 8, 10);
-  text(34, 614, `Mobile: ${data?.billTo?.mobile || ''} | GSTIN: ${data?.billTo?.gstin || ''} | PAN: ${data?.billTo?.pan || ''}`, 7, true);
+  rect(24, 580, 270, 96);
+  sectionMark(32, 665, 'BILL TO', 'right', 10);
+  text(32, 644, data?.billTo?.name || '', 13, true);
+  wrapped(32, 629, data?.billTo?.address || '', 46, 9, 11);
+  text(32, 594, `Mobile: ${data?.billTo?.mobile || ''} | GSTIN: ${data?.billTo?.gstin || ''} |`, 8.5, true);
+  text(32, 584, `PAN: ${data?.billTo?.pan || ''}    Place of Supply: ${data?.invoice?.placeOfSupply || 'Gujarat (24)'}`, 8.5, true);
+  rect(300, 604, 271, 72);
+  sectionMark(308, 665, 'SHIP TO', 'right', 10);
+  text(308, 644, data?.shipTo?.name || data?.billTo?.name || '', 13, true);
+  wrapped(308, 629, data?.shipTo?.address || data?.billTo?.address || '', 47, 8.5, 10);
 
-  rect(305, 610, 266, 84);
-  fillRect(305, 676, 266, 18, 0.9);
-  text(315, 682, 'SHIP TO', 9, true);
-  text(315, 660, data?.shipTo?.name || data?.billTo?.name || '', 13, true);
-  wrapped(315, 646, data?.shipTo?.address || data?.billTo?.address || '', 46, 8, 10);
-
-  fillRect(24, 585, 547, 18, 0.9);
-  rect(24, 585, 547, 18);
-  text(34, 591, 'PARTICULARS OF GOODS / SERVICES', 9, true);
-  const top = 562;
+  rect(24, 558, 547, 18);
+  fillRect(24, 558, 4, 18, 0);
+  sectionMark(38, 564, 'PARTICULARS OF GOODS / SERVICES', 'down', 10);
+  const top = 531;
   const cols = showPartyColumn
-    ? [24, 47, 100, 170, 260, 305, 350, 430, 480, 571]
-    : [24, 47, 100, 225, 280, 335, 425, 480, 571];
-  rect(24, top, 547, 23);
+    ? [24, 47, 101, 157, 244, 298, 353, 436, 491, 571]
+    : [24, 47, 101, 216, 271, 326, 415, 470, 571];
+  rect(24, top, 547, 27);
   const itemHeads = showPartyColumn
-    ? ['SR.', 'DATE', 'PARTY', 'DESCRIPTION', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'AMOUNT']
-    : ['SR.', 'DATE', 'DESCRIPTION', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'AMOUNT'];
-  itemHeads.forEach((head, i) => text(cols[i] + 4, top + 8, head, 7, true));
-  cols.slice(1, -1).forEach(x => line(x, top, x, top + 23));
-  let y = top - 18;
+    ? ['SR.', 'DATE', 'PARTY', 'DESCRIPTION OF', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'TAXABLE']
+    : ['SR.', 'DATE', 'DESCRIPTION OF', 'LR NO.', 'BILL NO.', 'QUANTITY', 'RATE', 'TAXABLE'];
+  itemHeads.forEach((head, i) => text(cols[i] + 3, top + 17, head, 7.2, true));
+  if (!showPartyColumn) text(cols[2] + 3, top + 7, 'GOODS / SERVICES', 7.2, true);
+  text(cols[cols.length - 2] + 6, top + 7, '(Rs./KG)', 7.2, true);
+  text(cols[cols.length - 1] - 8, top + 7, 'AMOUNT (Rs.)', 7.2, true, 'right');
+  cols.slice(1, -1).forEach(x => line(x, top, x, top + 27));
+  let y = top - 15;
   let totalQty = 0;
   let unit = 'KGS';
   const itemRows = [...items];
   while (itemRows.length < 12) itemRows.push({});
   itemRows.forEach((item: any, index: number) => {
-    rect(24, y - 4, 547, 18);
-    cols.slice(1, -1).forEach(x => line(x, y - 4, x, y + 14));
+    rect(24, y - 4, 547, 15);
+    cols.slice(1, -1).forEach(x => line(x, y - 4, x, y + 11));
     const amount = money(item.amt) || money(item.qty) * money(item.rate);
     totalQty += money(item.qty);
     if (item.unit) unit = pdfText(item.unit);
-    text(30, y + 1, index + 1, 7);
-    text(52, y + 1, item.date || '', 7);
+    text(36, y, index + 1, 7);
+    text(52, y, item.date || '', 7);
     if (showPartyColumn) {
-      text(105, y + 1, clipped(item.party, 14), 7);
-      text(175, y + 1, clipped(item.desc, 18), 7);
-      text(265, y + 1, item.lr || '', 7);
-      text(311, y + 1, item.bill || '', 7);
+      text(106, y, clipped(item.party, 12), 7);
+      text(162, y, clipped(item.desc, 17), 7);
+      text(249, y, item.lr || '', 7);
+      text(303, y, item.bill || '', 7);
+      text(432, y, item.qty ? `${fmtMoney(item.qty)} ${unit}` : '', 7, false, 'right');
+      text(486, y, item.rate || '', 7, false, 'right');
     } else {
-      text(105, y + 1, clipped(item.desc, 26), 7);
-      text(230, y + 1, item.lr || '', 7);
-      text(286, y + 1, item.bill || '', 7);
+      text(106, y, clipped(item.desc, 28), 8);
+      text(222, y, item.lr || '', 7);
+      text(277, y, item.bill || '', 7);
+      text(410, y, item.qty ? `${fmtMoney(item.qty)} ${unit}` : '', 7, false, 'right');
+      text(465, y, item.rate || '', 7, false, 'right');
     }
-    text(420, y + 1, item.qty ? `${fmtMoney(item.qty)} ${unit}` : '', 7, false, 'right');
-    text(475, y + 1, item.rate || '', 7, false, 'right');
-    text(565, y + 1, amount ? `Rs. ${fmtMoney(amount)}` : '', 7, true, 'right');
-    y -= 18;
+    text(562, y, amount ? moneyText(amount) : '', 8, true, 'right');
+    y -= 15;
   });
-  fillRect(24, y - 4, 547, 18, 0.94);
-  rect(24, y - 4, 547, 18);
-  text(150, y + 1, 'SUBTOTAL', 8, true);
-  text(420, y + 1, `${totalQty.toLocaleString('en-IN')} ${unit}`, 8, true, 'right');
-  text(565, y + 1, `Rs. ${fmtMoney(totals.taxable)}`, 8, true, 'right');
-  y -= 34;
+  rect(24, y - 4, 547, 16);
+  text(175, y + 1, 'SUBTOTAL', 8.5, true);
+  text(showPartyColumn ? 432 : 410, y + 1, `${totalQty.toLocaleString('en-IN')} ${unit}`, 8.5, true, 'right');
+  text(showPartyColumn ? 486 : 465, y + 1, '-', 8.5, true, 'right');
+  text(562, y + 1, moneyText(totals.taxable), 8.5, true, 'right');
+  y -= 26;
 
-  fillRect(24, y, 547, 18, 0.9);
   rect(24, y, 547, 18);
-  text(34, y + 6, 'HSN / SAC WISE TAX SUMMARY', 9, true);
-  y -= 23;
-  rect(24, y, 547, 38);
-  ['HSN/SAC', 'DESCRIPTION', 'TAXABLE', 'CGST', 'CGST AMT', 'SGST', 'SGST AMT', 'TOTAL TAX', 'GROSS'].forEach((head, i) => {
-    const xs = [28, 88, 205, 270, 320, 380, 430, 490, 545];
-    text(xs[i], y + 24, head, 6, true, i > 1 ? 'center' : 'left');
-  });
-  text(52, y + 8, data?.hsn?.code || '9965', 7, false, 'center');
-  text(125, y + 8, data?.hsn?.description || 'Transport Services', 7, false, 'center');
-  text(245, y + 8, fmtMoney(totals.taxable), 7, false, 'center');
-  text(288, y + 8, `${halfRate}%`, 7, false, 'center');
-  text(345, y + 8, fmtMoney(cgst), 7, false, 'center');
-  text(395, y + 8, `${halfRate}%`, 7, false, 'center');
-  text(455, y + 8, fmtMoney(sgst), 7, false, 'center');
-  text(522, y + 8, fmtMoney(cgst + sgst), 7, true, 'center');
-  text(560, y + 8, fmtMoney(grossTotal), 7, true, 'center');
+  fillRect(24, y, 4, 18, 0);
+  sectionMark(38, y + 6, 'HSN / SAC WISE TAX SUMMARY', 'down', 9.5);
+  y -= 48;
+  const hCols = [24, 103, 214, 274, 314, 363, 402, 451, 501, 571];
+  rect(24, y, 547, 48);
+  hCols.slice(1, -1).forEach(x => line(x, y, x, y + 48));
+  ['HSN/SAC', 'DESCRIPTION', 'TAXABLE', 'CGST', 'CGST', 'SGST', 'SGST', 'TOTAL', 'GROSS'].forEach((head, i) => text((hCols[i] + hCols[i + 1]) / 2, y + 34, head, 6.6, true, 'center'));
+  ['CODE', '', 'VALUE (Rs.)', 'RATE', 'AMT (Rs.)', 'RATE', 'AMT (Rs.)', 'TAX (Rs.)', 'AMOUNT (Rs.)'].forEach((head, i) => text((hCols[i] + hCols[i + 1]) / 2, y + 25, head, 6.3, true, 'center'));
+  text(63, y + 13, data?.hsn?.code || '9965', 8, false, 'center');
+  text(158, y + 13, data?.hsn?.description || 'Transport Services', 7, false, 'center');
+  text(244, y + 13, fmtMoney(totals.taxable), 7, false, 'center');
+  text(294, y + 13, `${halfRate}%`, 7, false, 'center');
+  text(338, y + 13, fmtMoney(cgst), 7, false, 'center');
+  text(383, y + 13, `${halfRate}%`, 7, false, 'center');
+  text(427, y + 13, fmtMoney(sgst), 7, false, 'center');
+  text(476, y + 13, fmtMoney(cgst + sgst), 7, true, 'center');
+  text(536, y + 13, fmtMoney(grossTotal), 7, true, 'center');
+  line(24, y + 10, 571, y + 10);
+  text(132, y + 2, 'TOTAL', 7.5, true, 'center');
+  text(244, y + 2, fmtMoney(totals.taxable), 7.5, true, 'center');
+  text(294, y + 2, '-', 7.5, true, 'center');
+  text(338, y + 2, fmtMoney(cgst), 7.5, true, 'center');
+  text(383, y + 2, '-', 7.5, true, 'center');
+  text(427, y + 2, fmtMoney(sgst), 7.5, true, 'center');
+  text(476, y + 2, fmtMoney(cgst + sgst), 7.5, true, 'center');
+  text(536, y + 2, fmtMoney(grossTotal), 7.5, true, 'center');
 
-  const lowerTop = y - 10;
   const leftX = 24;
-  const leftW = 380;
+  const leftW = 384;
   const rightX = 412;
   const rightW = 159;
-  const bankY = lowerTop - 70;
-  rect(leftX, bankY, leftW, 70);
-  fillRect(leftX, bankY + 52, leftW, 18, 0.9);
-  text(leftX + 10, bankY + 58, 'BANK DETAILS', 8, true);
-  text(leftX + 10, bankY + 40, 'Account No.  : 218705500445', 8, true);
-  text(leftX + 10, bankY + 28, 'IFSC Code    : ICIC0002187', 8, true);
-  text(leftX + 10, bankY + 16, 'Bank & Branch : ICICI Bank, Sachin', 8, true);
+  const bankY = y - 74;
+  rect(leftX, bankY, leftW, 66);
+  sectionMark(leftX + 8, bankY + 54, 'BANK DETAILS', 'right', 8.8);
+  text(leftX + 8, bankY + 39, 'Account No.  :  218705500445', 8.5, true);
+  text(leftX + 8, bankY + 27, 'IFSC Code    :  ICIC0002187', 8.5, true);
+  text(leftX + 8, bankY + 15, 'Bank & Branch :  ICICI Bank, Sachin', 8.5, true);
+
+  const taxY = bankY - 78;
+  rect(rightX, taxY - 12, rightW, 156);
+  triangle(rightX + 42, taxY + 127, 'down', 8);
+  text(rightX + rightW / 2 + 12, taxY + 128, 'TAX SUMMARY', 12, true, 'center');
+  line(rightX, taxY + 114, rightX + rightW, taxY + 114);
+  text(rightX + 10, taxY + 101, 'Taxable Amount', 8);
+  text(rightX + rightW - 10, taxY + 101, moneyText(totals.taxable), 8.5, true, 'right');
+  line(rightX, taxY + 92, rightX + rightW, taxY + 92);
+  text(rightX + 10, taxY + 80, `CGST @ ${halfRate}%`, 8);
+  text(rightX + rightW - 10, taxY + 80, moneyText(cgst), 8.5, true, 'right');
+  line(rightX, taxY + 70, rightX + rightW, taxY + 70);
+  text(rightX + 10, taxY + 58, `SGST @ ${halfRate}%`, 8);
+  text(rightX + rightW - 10, taxY + 58, moneyText(sgst), 8.5, true, 'right');
+  line(rightX, taxY + 48, rightX + rightW, taxY + 48);
+  text(rightX + 10, taxY + 39, 'TOTAL', 10, true);
+  text(rightX + 10, taxY + 28, 'AMOUNT', 10, true);
+  text(rightX + rightW - 10, taxY + 32, moneyText(grossTotal), 11, true, 'right');
+  line(rightX, taxY + 22, rightX + rightW, taxY + 22);
+  text(rightX + 10, taxY + 11, 'Received Amount', 8);
+  text(rightX + rightW - 10, taxY + 11, moneyText(received), 8.5, true, 'right');
+  line(rightX, taxY + 2, rightX + rightW, taxY + 2);
+  text(rightX + 10, taxY - 9, 'BALANCE DUE', 8.5, true);
+  text(rightX + rightW - 10, taxY - 9, moneyText(due), 8.5, true, 'right');
 
   const termsY = bankY - 64;
   rect(leftX, termsY, leftW, 58);
-  fillRect(leftX, termsY + 40, leftW, 18, 0.9);
-  text(leftX + 10, termsY + 46, 'TERMS & CONDITIONS', 8, true);
-  text(leftX + 10, termsY + 29, '1. Goods once sold will not be taken back or exchanged.', 7);
-  text(leftX + 10, termsY + 19, '2. All disputes are subject to Surat jurisdiction only.', 7);
-  text(leftX + 10, termsY + 9, '3. Payment is due within the agreed credit period.', 7);
+  sectionMark(leftX + 8, termsY + 46, 'TERMS & CONDITIONS', 'right', 8.5);
+  text(leftX + 8, termsY + 31, '1. Goods once sold will not be taken back or exchanged.', 8);
+  text(leftX + 8, termsY + 20, '2. All disputes are subject to Surat jurisdiction only.', 8);
+  text(leftX + 8, termsY + 9, '3. Payment is due within the agreed credit period.', 8);
 
-  const wordsY = termsY - 28;
-  rect(leftX, wordsY, leftW, 22);
-  text(leftX + 10, wordsY + 12, 'TOTAL AMOUNT IN WORDS:', 7, true);
-  text(leftX + 112, wordsY + 12, toWords(grossTotal), 7, false);
+  const wordsY = termsY - 32;
+  rect(leftX, wordsY, leftW, 28);
+  text(leftX + 8, wordsY + 16, 'TOTAL AMOUNT IN WORDS:', 8.5, true);
+  text(leftX + 8, wordsY + 6, toWords(grossTotal), 8, false);
 
-  const taxY = termsY;
-  rect(rightX, taxY, rightW, 134);
-  fillRect(rightX, taxY + 116, rightW, 18, 0.9);
-  text(rightX + rightW / 2, taxY + 122, 'TAX SUMMARY', 12, true, 'center');
-  text(rightX + 10, taxY + 100, 'Taxable Amount', 8);
-  text(rightX + rightW - 10, taxY + 100, `Rs. ${fmtMoney(totals.taxable)}`, 8, true, 'right');
-  text(rightX + 10, taxY + 84, `CGST @ ${halfRate}%`, 8);
-  text(rightX + rightW - 10, taxY + 84, `Rs. ${fmtMoney(cgst)}`, 8, true, 'right');
-  text(rightX + 10, taxY + 68, `SGST @ ${halfRate}%`, 8);
-  text(rightX + rightW - 10, taxY + 68, `Rs. ${fmtMoney(sgst)}`, 8, true, 'right');
-  fillRect(rightX, taxY + 36, rightW, 24, 0.9);
-  text(rightX + 10, taxY + 45, 'TOTAL AMOUNT', 8, true);
-  text(rightX + rightW - 10, taxY + 45, `Rs. ${fmtMoney(grossTotal)}`, 8, true, 'right');
-  text(rightX + 10, taxY + 20, 'Received Amount', 8);
-  text(rightX + rightW - 10, taxY + 20, `Rs. ${fmtMoney(received)}`, 8, true, 'right');
-  text(rightX + 10, taxY + 5, 'BALANCE DUE', 8, true);
-  text(rightX + rightW - 10, taxY + 5, `Rs. ${fmtMoney(due)}`, 8, true, 'right');
-
-  const signY = taxY - 78;
-  rect(rightX, signY, rightW, 72);
-  text(rightX + rightW - 10, signY + 59, 'Authorised Signatory', 7, false, 'right');
-  line(rightX + 68, signY + 35, rightX + rightW - 10, signY + 35);
-  text(rightX + rightW - 10, signY + 25, 'For,', 8, false, 'right');
-  text(rightX + rightW - 10, signY + 12, 'SHREE BALAJI TEMPO', 9, true, 'right');
-  text(rightX + rightW - 10, signY + 2, 'SERVICES', 9, true, 'right');
+  const signY = taxY - 102;
+  rect(rightX, signY, rightW, 88);
+  text(rightX + rightW - 10, signY + 73, 'Authorised Signatory', 7.5, false, 'right');
+  line(rightX + 70, signY + 42, rightX + rightW - 8, signY + 42);
+  text(rightX + rightW - 10, signY + 31, 'For,', 8, false, 'right');
+  text(rightX + rightW - 10, signY + 17, 'SHREE BALAJI TEMPO', 10, true, 'right');
+  text(rightX + rightW - 10, signY + 5, 'SERVICES', 10, true, 'right');
   ops.push('Q');
 
   const content = ops.join('\n');
